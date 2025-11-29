@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="el">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>G-Power Web Tool (ANOVA & T-Test)</title>
@@ -22,41 +22,52 @@
         #result { background-color: #2980b9; color: white; padding: 15px; border-radius: 5px; text-align: center; font-size: 1.5em; transition: background-color 0.3s; }
         #result.error { background-color: #e74c3c; }
         #loader { text-align: center; color: #7f8c8d; }
+        /* NEW: Progress bar styles */
+        #progress-container { width: 80%; margin: 15px auto 0; background-color: #eee; border-radius: 4px; overflow: hidden; height: 20px; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1); }
+        #progress-bar { height: 100%; width: 0%; background-color: #3498db; transition: width 0.3s ease; }
+        #progress-text { margin-top: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Υπολογιστής Μεγέθους Δείγματος</h1>
-        <div id="loader"><p>Φόρτωση στατιστικής μηχανής...</p></div>
+        <h1>Sample Size Calculator</h1>
+        
+        <div id="loader">
+            <p>Loading statistics engine...</p>
+            <div id="progress-container">
+                <div id="progress-bar"></div>
+            </div>
+            <p id="progress-text">0%</p>
+        </div>
 
         <div id="app" style="display:none;">
             <div class="control-group">
                 <label for="groups">
-                    <span class="tooltip">Αριθμός Ομάδων 👨‍⚕️‍⚕️‍⚕️
-                        <span class="tooltiptext">Επιλέξτε 2 για T-test. Επιλέξτε 3 ή περισσότερες για ANOVA.</span>
+                    <span class="tooltip">Number of Groups
+                        <span class="tooltiptext">Select 2 for T-test. Select 3 or more for ANOVA.</span>
                     </span>
                 </label>
                 <input type="number" id="groups" value="2" min="2" max="10" oninput="updateValues()">
             </div>
             <div class="control-group">
                 <label>
-                    <span class="tooltip">Μέγεθος Επίδρασης (Effect Size) 📈
-                        <span class="tooltiptext">Για 2 ομάδες (T-test) χρησιμοποιείται το Cohen's d. Για 3+ ομάδες (ANOVA) χρησιμοποιείται το Cohen's f.</span>
+                    <span class="tooltip">Effect Size
+                        <span class="tooltiptext">For 2 groups (T-test), Cohen's d is used. For 3+ groups (ANOVA), Cohen's f is used.</span>
                     </span>
                     <span id="effectSizeValue" class="value-display">0.50</span>
                 </label>
                 <input type="range" id="effectSize" min="0.05" max="1.5" step="0.01" value="0.5" oninput="updateValues()">
                 <div class="presets">
-                    <small>Προεπιλογές (<span id="preset-label">T-test: d</span>):</small>
-                    <button id="preset-small" onclick="setEffectSize(0.2)">Μικρή</button>
-                    <button id="preset-medium" onclick="setEffectSize(0.5)">Μέτρια</button>
-                    <button id="preset-large" onclick="setEffectSize(0.8)">Μεγάλη</button>
+                    <small>Presets (<span id="preset-label">T-test: d</span>):</small>
+                    <button id="preset-small" onclick="setEffectSize(0.2)">Small</button>
+                    <button id="preset-medium" onclick="setEffectSize(0.5)">Medium</button>
+                    <button id="preset-large" onclick="setEffectSize(0.8)">Large</button>
                 </div>
             </div>
             <div class="control-group">
                 <label>
-                     <span class="tooltip">Στατιστική Ισχύς (Power) 🎯
-                        <span class="tooltiptext">Η πιθανότητα να ανιχνεύσετε μια επίδραση, αν αυτή υπάρχει. Τιμές κάτω του 0.80 δεν συνιστώνται.</span>
+                     <span class="tooltip">Statistical Power
+                        <span class="tooltiptext">The probability of detecting an effect if it exists. Values below 0.80 are not recommended.</span>
                     </span>
                     <span id="powerValue" class="value-display">0.80</span>
                 </label>
@@ -64,27 +75,54 @@
             </div>
             <div class="control-group">
                 <label>
-                    <span class="tooltip">Επίπεδο Σημαντικότητας (alpha) 🎲
-                        <span class="tooltiptext">Το ρίσκο να βρείτε μια επίδραση που δεν υπάρχει. Η σύμβαση είναι 5% (0.05).</span>
+                    <span class="tooltip">Significance Level (alpha)
+                        <span class="tooltiptext">The risk of finding an effect that does not exist. The convention is 5% (0.05).</span>
                     </span>
                     <span id="alphaValue" class="value-display">0.05</span>
                 </label>
                 <input type="range" id="alpha" min="0.01" max="0.1" step="0.01" value="0.05" oninput="updateValues()">
             </div>
-            <h2>Απαιτούμενο Δείγμα:</h2>
+            <h2>Required Sample:</h2>
             <div id="result">...</div>
         </div>
     </div>
 
     <script type="text/javascript">
         let pyodide;
+        
+        // MODIFIED: main() function now implements the progress bar logic
         async function main() {
-            pyodide = await loadPyodide();
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            
+            // 1. Loading Pyodide Core with Progress Bar
+            progressText.innerText = "Downloading core engine files...";
+            pyodide = await loadPyodide({
+                // The progress callback updates the bar
+                progress: (loaded, total) => {
+                    // Use up to 95% for core loading, reserving 5% for package
+                    const percentage = Math.round((loaded / total) * 95); 
+                    progressBar.style.width = `${percentage}%`;
+                    progressText.innerText = `Downloading core engine: ${percentage}%`;
+                }
+            });
+
+            // 2. Loading statsmodels package
+            progressText.innerText = "Loading statsmodels package...";
+            // Set bar to 100% when package loading begins/completes
+            progressBar.style.width = `100%`; 
             await pyodide.loadPackage("statsmodels");
+
+            // 3. Finalization
+            progressText.innerText = "Engine ready!";
             console.log("Pyodide and statsmodels are ready!");
-            document.getElementById('loader').style.display = 'none';
-            document.getElementById('app').style.display = 'block';
-            updateValues(); 
+
+            // Hide the loader and show the app
+            setTimeout(() => {
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('app').style.display = 'block';
+                updateValues();
+            }, 200); // Small delay for visual completion
         }
         main();
 
@@ -139,7 +177,7 @@
         async function calculateSampleSize(effectSize, power, alpha, groups) {
             if (!pyodide) return;
             const resultDiv = document.getElementById("result");
-            resultDiv.innerText = "Υπολογίζεται...";
+            resultDiv.innerText = "Calculating...";
             resultDiv.classList.remove('error'); 
             let pythonCode = "";
             if (groups == 2) {
@@ -167,11 +205,11 @@ json.dumps(result)
                 let resultsJson = await pyodide.runPythonAsync(pythonCode);
                 let results = JSON.parse(resultsJson);
                 if (results.error) { throw new Error("Calculation failed in Python."); }
-                resultDiv.innerHTML = `<strong>${results.total} άτομα (συνολικά)</strong><br><small>(${results.per_group} άτομα ανά ομάδα)</small>`;
+                resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} participants per group)</small>`;
             } catch (error) {
                 console.error("Calculation Error:", error);
-                // ΑΥΤΟ ΕΙΝΑΙ ΤΟ ΣΩΣΤΟ, ΓΕΝΙΚΟ ΜΗΝΥΜΑ ΣΦΑΛΜΑΤΟΣ
-                resultDiv.innerText = "Αδύνατος υπολογισμός. Ο συνδυασμός των παραμέτρων είναι εκτός λογικών ορίων. Δοκιμάστε να αλλάξετε ελαφρώς μία από τις τιμές.";
+                // This is the correct, general error message
+                resultDiv.innerText = "Calculation not possible. The combination of parameters is outside logical limits. Try slightly changing one of the values.";
                 resultDiv.classList.add('error');
             }
         }
