@@ -4,6 +4,14 @@
 
 A web-based sample size calculator for statistical power analysis, supporting ANOVA and T-Test calculations.
 
+## Usage
+
+Simply visit the [GPower Web Tool](https://porfanid.github.io/GPower/) in a modern web browser. The tool will:
+
+1. Load the Python statistics engine (statsmodels)
+2. Present an interactive interface for entering parameters
+3. Calculate required sample sizes in real-time
+
 ## Features
 
 - **T-Test Power Analysis**: Calculate required sample sizes for independent samples t-tests using Cohen's d effect size
@@ -13,24 +21,12 @@ A web-based sample size calculator for statistical power analysis, supporting AN
 - **Mobile Responsive**: Works seamlessly on both desktop and mobile devices
 - **No Installation Required**: Runs entirely in your browser using Pyodide (Python in WebAssembly)
 
-## Usage
-
-Simply open `index.html` in a modern web browser. The tool will:
-
-1. Load the Python statistics engine (statsmodels)
-2. Present an interactive interface for entering parameters
-3. Calculate required sample sizes in real-time
-
 ### Parameters
 
 - **Number of Groups**: 2 for T-test, 3+ for ANOVA
 - **Effect Size**: Expected magnitude of the effect (Cohen's d for T-test, Cohen's f for ANOVA)
 - **Statistical Power**: Probability of detecting an effect if it exists (typically 0.80)
 - **Significance Level (alpha)**: Risk of Type I error (typically 0.05)
-
-## Live Demo
-
-Visit the [GPower Web Tool](https://porfanid.github.io/GPower/) to use the calculator online.
 
 ## Citation
 

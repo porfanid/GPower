@@ -1,6 +1,6 @@
 {
     "title": "GPower Sample Size Calculator",
-    "description": "A web-based sample size calculator for statistical power analysis using Pyodide and statsmodels. Supports T-test and ANOVA power analysis with real-time calculations in the browser.",
+    "description": "A web-based sample size calculator for statistical power analysis using Pyodide and statsmodels. Supports T-test and ANOVA power analysis with real-time calculations in the browser.<a href=\"https://porfanid.github.io/GPower/\">Go to Live</a>",
     "creators": [
         {
             "name": "Pavlos Orfanidis",
