@@ -251,20 +251,19 @@
                     </span>
                 </label>
                 <select id="analysisType" onchange="updateValues()">
-                    <option value="ttest">T-Test (2 Groups)</option>
-                    <option value="anova">ANOVA (3+ Groups)</option>
+                    <option value="groups">Groups (T-Test / ANOVA)</option>
                     <option value="proportions">Two Proportions</option>
                 </select>
             </div>
 
             <div id="continuous-controls">
-                <div class="control-group" id="groups-control" style="display:none;">
+                <div class="control-group" id="groups-control">
                     <label for="groups">
                         <span class="tooltip">Number of Groups
-                            <span class="tooltiptext">Number of groups to compare in your ANOVA.</span>
+                            <span class="tooltiptext">Select 2 for T-test. Select 3 or more for ANOVA.</span>
                         </span>
                     </label>
-                    <input type="number" id="groups" value="3" min="3" max="10" oninput="updateValues()">
+                    <input type="number" id="groups" value="2" min="2" max="10" oninput="updateValues()">
                 </div>
                 
                 <div class="control-group">
@@ -385,7 +384,6 @@
 
             const continuousControls = document.getElementById('continuous-controls');
             const dichotomousControls = document.getElementById('dichotomous-controls');
-            const groupsControl = document.getElementById('groups-control');
 
             document.getElementById('alphaValue').innerText = parseFloat(alpha).toFixed(2);
             const powerValueDisplay = document.getElementById('powerValue');
@@ -403,28 +401,24 @@
                 const p2 = document.getElementById('p2').value;
                 calculateProportionSampleSize(p1, p2, power, alpha);
             } else {
+                // Groups mode (T-Test for 2 groups, ANOVA for 3+)
                 continuousControls.style.display = 'block';
                 dichotomousControls.style.display = 'none';
                 
+                const groups = document.getElementById('groups').value;
                 const effectSizeSlider = document.getElementById('effectSize');
                 
-                if (analysisType === 'ttest') {
-                    groupsControl.style.display = 'none';
-                    effectSizeSlider.max = 1.5;
-                    updatePresets(2);
-                    const effectSize = effectSizeSlider.value;
-                    document.getElementById('effectSizeValue').innerText = parseFloat(effectSize).toFixed(2);
-                    calculateSampleSize(effectSize, power, alpha, 2);
-                } else {
-                    groupsControl.style.display = 'block';
-                    const groups = document.getElementById('groups').value;
+                if (groups > 2) {
                     effectSizeSlider.max = 0.8;
                     if (effectSizeSlider.value > 0.8) { effectSizeSlider.value = 0.8; }
-                    updatePresets(groups);
-                    const effectSize = effectSizeSlider.value;
-                    document.getElementById('effectSizeValue').innerText = parseFloat(effectSize).toFixed(2);
-                    calculateSampleSize(effectSize, power, alpha, groups);
+                } else {
+                    effectSizeSlider.max = 1.5;
                 }
+                
+                updatePresets(groups);
+                const effectSize = effectSizeSlider.value;
+                document.getElementById('effectSizeValue').innerText = parseFloat(effectSize).toFixed(2);
+                calculateSampleSize(effectSize, power, alpha, groups);
             }
         }
 
