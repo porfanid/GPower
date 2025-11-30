@@ -323,6 +323,16 @@
                 
                 <input type="range" id="alpha" min="0.01" max="0.1" step="0.01" value="0.05" oninput="updateValues()">
             </div>
+
+            <div class="control-group">
+                <label>
+                    <span class="tooltip">Expected Dropout Rate
+                        <span class="tooltiptext">The expected percentage of participants who will drop out of the study. Set to 0% if no dropouts are expected.</span>
+                    </span>
+                    <span id="dropoutValue" class="value-display">0%</span>
+                </label>
+                <input type="range" id="dropout" min="0" max="0.5" step="0.01" value="0" oninput="updateValues()">
+            </div>
             
             <h2>Required Sample:</h2>
             <div id="result">...</div>
@@ -381,11 +391,13 @@
             const analysisType = document.getElementById('analysisType').value;
             const power = document.getElementById('power').value;
             const alpha = document.getElementById('alpha').value;
+            const dropout = document.getElementById('dropout').value;
 
             const continuousControls = document.getElementById('continuous-controls');
             const dichotomousControls = document.getElementById('dichotomous-controls');
 
             document.getElementById('alphaValue').innerText = parseFloat(alpha).toFixed(2);
+            document.getElementById('dropoutValue').innerText = Math.round(parseFloat(dropout) * 100) + '%';
             const powerValueDisplay = document.getElementById('powerValue');
             powerValueDisplay.innerText = parseFloat(power).toFixed(2);
             if (power < 0.80) {
@@ -399,7 +411,7 @@
                 dichotomousControls.style.display = 'block';
                 const p1 = document.getElementById('p1').value;
                 const p2 = document.getElementById('p2').value;
-                calculateProportionSampleSize(p1, p2, power, alpha);
+                calculateProportionSampleSize(p1, p2, power, alpha, dropout);
             } else {
                 // Groups mode (T-Test for 2 groups, ANOVA for 3+)
                 continuousControls.style.display = 'block';
@@ -418,7 +430,7 @@
                 updatePresets(groups);
                 const effectSize = effectSizeSlider.value;
                 document.getElementById('effectSizeValue').innerText = parseFloat(effectSize).toFixed(2);
-                calculateSampleSize(effectSize, power, alpha, groups);
+                calculateSampleSize(effectSize, power, alpha, groups, dropout);
             }
         }
 
@@ -445,7 +457,7 @@
             }
         }
 
-        async function calculateSampleSize(effectSize, power, alpha, groups) {
+        async function calculateSampleSize(effectSize, power, alpha, groups, dropout) {
             if (!pyodide) return;
             const resultDiv = document.getElementById("result");
             resultDiv.innerText = "Calculating...";
@@ -466,17 +478,30 @@ sample_size_per_group = analysis.solve_power(effect_size=${effectSize}, k_groups
             }
             pythonCode += `
 import json
+import math
 if sample_size_per_group is None or sample_size_per_group < 2:
     result = {"error": True}
 else:
-    result = {"per_group": round(sample_size_per_group), "total": round(sample_size_per_group * ${groups})}
+    per_group_theoretical = round(sample_size_per_group)
+    total_theoretical = round(sample_size_per_group * ${groups})
+    dropout_rate = ${dropout}
+    if dropout_rate > 0:
+        per_group_adjusted = math.ceil(per_group_theoretical / (1 - dropout_rate))
+        total_adjusted = math.ceil(total_theoretical / (1 - dropout_rate))
+        result = {"per_group": per_group_adjusted, "total": total_adjusted, "per_group_theoretical": per_group_theoretical, "total_theoretical": total_theoretical, "has_dropout": True}
+    else:
+        result = {"per_group": per_group_theoretical, "total": total_theoretical, "has_dropout": False}
 json.dumps(result)
 `;
             try {
                 let resultsJson = await pyodide.runPythonAsync(pythonCode);
                 let results = JSON.parse(resultsJson);
                 if (results.error) { throw new Error("Calculation failed in Python."); }
-                resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} participants per group)</small>`;
+                if (results.has_dropout) {
+                    resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} per group, adjusted for dropouts)<br>Theoretical: ${results.total_theoretical} total (${results.per_group_theoretical} per group)</small>`;
+                } else {
+                    resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} participants per group)</small>`;
+                }
             } catch (error) {
                 console.error("Calculation Error:", error);
                 // This is the correct, general error message
@@ -485,7 +510,7 @@ json.dumps(result)
             }
         }
 
-        async function calculateProportionSampleSize(p1, p2, power, alpha) {
+        async function calculateProportionSampleSize(p1, p2, power, alpha, dropout) {
             if (!pyodide) return;
             const resultDiv = document.getElementById("result");
             resultDiv.innerText = "Calculating...";
@@ -496,6 +521,7 @@ json.dumps(result)
             p2 = parseFloat(p2);
             power = parseFloat(power);
             alpha = parseFloat(alpha);
+            dropout = parseFloat(dropout);
 
             // Validate all inputs are valid numbers
             if (isNaN(p1) || isNaN(p2) || isNaN(power) || isNaN(alpha)) {
@@ -522,11 +548,13 @@ json.dumps(result)
 from statsmodels.stats.proportion import proportion_effectsize
 from statsmodels.stats.power import NormalIndPower
 import json
+import math
 
 p1 = ${p1}
 p2 = ${p2}
 power_val = ${power}
 alpha_val = ${alpha}
+dropout_rate = ${dropout}
 
 # Calculate Cohen's h effect size for two proportions
 effect_size = proportion_effectsize(p1, p2)
@@ -539,14 +567,25 @@ sample_size_per_group = analysis.solve_power(effect_size=abs(effect_size), power
 if sample_size_per_group is None or sample_size_per_group < 2:
     result = {"error": True}
 else:
-    result = {"per_group": round(sample_size_per_group), "total": round(sample_size_per_group * 2), "effect_size": round(abs(effect_size), 3)}
+    per_group_theoretical = round(sample_size_per_group)
+    total_theoretical = round(sample_size_per_group * 2)
+    if dropout_rate > 0:
+        per_group_adjusted = math.ceil(per_group_theoretical / (1 - dropout_rate))
+        total_adjusted = math.ceil(total_theoretical / (1 - dropout_rate))
+        result = {"per_group": per_group_adjusted, "total": total_adjusted, "per_group_theoretical": per_group_theoretical, "total_theoretical": total_theoretical, "effect_size": round(abs(effect_size), 3), "has_dropout": True}
+    else:
+        result = {"per_group": per_group_theoretical, "total": total_theoretical, "effect_size": round(abs(effect_size), 3), "has_dropout": False}
 json.dumps(result)
 `;
             try {
                 let resultsJson = await pyodide.runPythonAsync(pythonCode);
                 let results = JSON.parse(resultsJson);
                 if (results.error) { throw new Error("Calculation failed in Python."); }
-                resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} per group, Cohen's h = ${results.effect_size})</small>`;
+                if (results.has_dropout) {
+                    resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} per group, Cohen's h = ${results.effect_size}, adjusted for dropouts)<br>Theoretical: ${results.total_theoretical} total (${results.per_group_theoretical} per group)</small>`;
+                } else {
+                    resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} per group, Cohen's h = ${results.effect_size})</small>`;
+                }
             } catch (error) {
                 console.error("Calculation Error:", error);
                 resultDiv.innerText = "Calculation not possible. The combination of parameters is outside logical limits. Try slightly changing one of the values.";
