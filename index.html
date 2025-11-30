@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
     <link rel="manifest" href="favicon_io/site.webmanifest">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G-Power Web Tool (ANOVA & T-Test)</title>
+    <title>GPower - Sample Size Calculator for Power Analysis</title>
     <meta name="fediverse:creator" content="@porfan@mastodon.social">
     
     <meta name="author" content="Pavlos Orfanidis">
@@ -17,13 +17,13 @@
     
     <meta name="citation_author" content="Pavlos Orfanidis">
     <meta name="citation_doi" content="10.5281/zenodo.17768003">
-    <meta name="citation_software_edition" content="1.0.3">
-    <meta name="citation_abstract" content="A web-based sample size calculator for statistical power analysis, supporting ANOVA and T-Test calculations.">
+    <meta name="citation_software_edition" content="2.0.0">
+    <meta name="citation_abstract" content="A web-based sample size calculator for statistical power analysis, supporting T-Test, ANOVA, and Two Proportions calculations with dropout rate adjustment.">
     
     
-    <meta property="og:title" content="GPower: Web-based Sample Size Calculator for ANOVA and T-Test">
-    <meta property="og:description" content="A real-time, in-browser power analysis tool for T-tests and ANOVAs built with Pyodide and statsmodels.">
-    <meta property="og:url" content="https://porfanid.github.io/GPower/">
+    <meta property="og:title" content="GPower: Sample Size Calculator for Power Analysis">
+    <meta property="og:description" content="A real-time, in-browser power analysis tool for T-tests, ANOVAs, and Two Proportions with dropout rate adjustment. Built with Pyodide and statsmodels.">
+    <meta property="og:url" content="https://orfanidis.net.gr/GPower/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="GPower">
     <meta property="og:image" content="https://repository-images.githubusercontent.com/1106672819/e6c5fd9b-9265-4e32-a146-6fede693ae10">
@@ -32,7 +32,7 @@
     
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="GPower: Sample Size Calculator">
-    <meta name="twitter:description" content="A real-time, in-browser power analysis tool for T-tests and ANOVAs built with Pyodide and statsmodels.">
+    <meta name="twitter:description" content="A real-time, in-browser power analysis tool for T-tests, ANOVAs, and Two Proportions with dropout rate adjustment.">
     <meta name="twitter:image" content="https://repository-images.githubusercontent.com/1106672819/e6c5fd9b-9265-4e32-a146-6fede693ae10">
     
     <link rel="author" href="https://orfanidis.net.gr/#/contact">
@@ -177,6 +177,39 @@
             text-decoration: underline;
         }
 
+        /* Analysis type select styling */
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 1em;
+            background-color: #fff;
+            cursor: pointer;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        select:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+            outline: none;
+        }
+
+        /* Proportion inputs styling */
+        .proportion-inputs {
+            display: flex;
+            gap: 15px;
+        }
+        .proportion-inputs .input-group {
+            flex: 1;
+        }
+        .proportion-inputs label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .proportion-inputs input[type="number"] {
+            width: 100%;
+        }
+
         /* Media Query for larger screens (e.g., desktop/tablet) */
         @media (min-width: 768px) {
             body {
@@ -212,28 +245,62 @@
         <div id="app" style="display:none;">
             
             <div class="control-group">
-                <label for="groups">
-                    <span class="tooltip">Number of Groups
-                        <span class="tooltiptext">Select 2 for T-test. Select 3 or more for ANOVA.</span>
+                <label for="analysisType">
+                    <span class="tooltip">Analysis Type
+                        <span class="tooltiptext">Choose the type of statistical analysis for your study.</span>
                     </span>
                 </label>
-                <input type="number" id="groups" value="2" min="2" max="10" oninput="updateValues()">
+                <select id="analysisType" onchange="updateValues()">
+                    <option value="groups">Groups (T-Test / ANOVA)</option>
+                    <option value="proportions">Two Proportions</option>
+                </select>
             </div>
-            
-            
-            <div class="control-group">
-                <label>
-                    <span class="tooltip">Effect Size
-                        <span class="tooltiptext">For 2 groups (T-test), Cohen's d is used. For 3+ groups (ANOVA), Cohen's f is used.</span>
-                    </span>
-                    <span id="effectSizeValue" class="value-display">0.50</span>
-                </label>
-                <input type="range" id="effectSize" min="0.05" max="1.5" step="0.01" value="0.5" oninput="updateValues()">
-                <div class="presets">
-                    <small>Presets (<span id="preset-label">T-test: d</span>):</small>
-                    <button id="preset-small" onclick="setEffectSize(0.2)">Small</button>
-                    <button id="preset-medium" onclick="setEffectSize(0.5)">Medium</button>
-                    <button id="preset-large" onclick="setEffectSize(0.8)">Large</button>
+
+            <div id="continuous-controls">
+                <div class="control-group" id="groups-control">
+                    <label for="groups">
+                        <span class="tooltip">Number of Groups
+                            <span class="tooltiptext">Select 2 for T-test. Select 3 or more for ANOVA.</span>
+                        </span>
+                    </label>
+                    <input type="number" id="groups" value="2" min="2" max="10" oninput="updateValues()">
+                </div>
+                
+                <div class="control-group">
+                    <label>
+                        <span class="tooltip">Effect Size
+                            <span class="tooltiptext">For T-test, Cohen's d is used. For ANOVA, Cohen's f is used.</span>
+                        </span>
+                        <span id="effectSizeValue" class="value-display">0.50</span>
+                    </label>
+                    <input type="range" id="effectSize" min="0.05" max="1.5" step="0.01" value="0.5" oninput="updateValues()">
+                    <div class="presets">
+                        <small>Presets (<span id="preset-label">T-test: d</span>):</small>
+                        <button id="preset-small" onclick="setEffectSize(0.2)">Small</button>
+                        <button id="preset-medium" onclick="setEffectSize(0.5)">Medium</button>
+                        <button id="preset-large" onclick="setEffectSize(0.8)">Large</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dichotomous-controls" style="display:none;">
+                <div class="control-group">
+                    <label>
+                        <span class="tooltip">Proportions (P1 and P2)
+                            <span class="tooltiptext">P1: Baseline proportion (e.g., control group rate). P2: Target proportion (e.g., intervention group rate). Enter values between 0 and 1.</span>
+                        </span>
+                        <span id="cohensHValue" class="value-display">h = 0.00</span>
+                    </label>
+                    <div class="proportion-inputs">
+                        <div class="input-group">
+                            <label for="p1">Baseline Rate / Control Group</label>
+                            <input type="number" id="p1" value="0.5" min="0.01" max="0.99" step="0.01" oninput="updateValues()">
+                        </div>
+                        <div class="input-group">
+                            <label for="p2">Expected Treatment Rate</label>
+                            <input type="number" id="p2" value="0.7" min="0.01" max="0.99" step="0.01" oninput="updateValues()">
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -256,6 +323,16 @@
                 </label>
                 
                 <input type="range" id="alpha" min="0.01" max="0.1" step="0.01" value="0.05" oninput="updateValues()">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <span class="tooltip">Expected Dropout Rate
+                        <span class="tooltiptext">The expected percentage of participants who will drop out of the study. Set to 0% if no dropouts are expected.</span>
+                    </span>
+                    <span id="dropoutValue" class="value-display">0%</span>
+                </label>
+                <input type="range" id="dropout" min="0" max="0.5" step="0.01" value="0" oninput="updateValues()">
             </div>
             
             <h2>Required Sample:</h2>
@@ -312,20 +389,16 @@
         main();
 
         function updateValues() {
-            const groups = document.getElementById('groups').value;
-            updatePresets(groups);
-            const effectSizeSlider = document.getElementById('effectSize');
-            if (groups > 2) {
-                effectSizeSlider.max = 0.8; 
-                if (effectSizeSlider.value > 0.8) { effectSizeSlider.value = 0.8; }
-            } else {
-                effectSizeSlider.max = 1.5;
-            }
-            const effectSize = effectSizeSlider.value;
+            const analysisType = document.getElementById('analysisType').value;
             const power = document.getElementById('power').value;
             const alpha = document.getElementById('alpha').value;
-            document.getElementById('effectSizeValue').innerText = parseFloat(effectSize).toFixed(2);
+            const dropout = document.getElementById('dropout').value;
+
+            const continuousControls = document.getElementById('continuous-controls');
+            const dichotomousControls = document.getElementById('dichotomous-controls');
+
             document.getElementById('alphaValue').innerText = parseFloat(alpha).toFixed(2);
+            document.getElementById('dropoutValue').innerText = Math.round(parseFloat(dropout) * 100) + '%';
             const powerValueDisplay = document.getElementById('powerValue');
             powerValueDisplay.innerText = parseFloat(power).toFixed(2);
             if (power < 0.80) {
@@ -333,12 +406,54 @@
             } else {
                 powerValueDisplay.classList.remove('warning');
             }
-            calculateSampleSize(effectSize, power, alpha, groups);
+
+            if (analysisType === 'proportions') {
+                continuousControls.style.display = 'none';
+                dichotomousControls.style.display = 'block';
+                const p1 = document.getElementById('p1').value;
+                const p2 = document.getElementById('p2').value;
+                
+                // Calculate and display Cohen's h in real-time
+                const cohensH = calculateCohensH(parseFloat(p1), parseFloat(p2));
+                document.getElementById('cohensHValue').innerText = 'h = ' + cohensH.toFixed(2);
+                
+                calculateProportionSampleSize(p1, p2, power, alpha, dropout);
+            } else {
+                // Groups mode (T-Test for 2 groups, ANOVA for 3+)
+                continuousControls.style.display = 'block';
+                dichotomousControls.style.display = 'none';
+                
+                const groups = document.getElementById('groups').value;
+                const effectSizeSlider = document.getElementById('effectSize');
+                
+                if (groups > 2) {
+                    effectSizeSlider.max = 0.8;
+                    if (effectSizeSlider.value > 0.8) { effectSizeSlider.value = 0.8; }
+                } else {
+                    effectSizeSlider.max = 1.5;
+                }
+                
+                updatePresets(groups);
+                const effectSize = effectSizeSlider.value;
+                document.getElementById('effectSizeValue').innerText = parseFloat(effectSize).toFixed(2);
+                calculateSampleSize(effectSize, power, alpha, groups, dropout);
+            }
         }
 
         function setEffectSize(value) {
             document.getElementById('effectSize').value = value;
             updateValues();
+        }
+
+        // Calculate Cohen's h effect size for two proportions
+        function calculateCohensH(p1, p2) {
+            if (isNaN(p1) || isNaN(p2) || p1 <= 0 || p1 >= 1 || p2 <= 0 || p2 >= 1) {
+                return 0;
+            }
+            // Cohen's h = 2 * arcsin(sqrt(p2)) - 2 * arcsin(sqrt(p1))
+            const phi1 = 2 * Math.asin(Math.sqrt(p1));
+            const phi2 = 2 * Math.asin(Math.sqrt(p2));
+            return Math.abs(phi2 - phi1);
         }
 
         function updatePresets(groups) {
@@ -359,7 +474,7 @@
             }
         }
 
-        async function calculateSampleSize(effectSize, power, alpha, groups) {
+        async function calculateSampleSize(effectSize, power, alpha, groups, dropout) {
             if (!pyodide) return;
             const resultDiv = document.getElementById("result");
             resultDiv.innerText = "Calculating...";
@@ -380,20 +495,116 @@ sample_size_per_group = analysis.solve_power(effect_size=${effectSize}, k_groups
             }
             pythonCode += `
 import json
+import math
 if sample_size_per_group is None or sample_size_per_group < 2:
     result = {"error": True}
 else:
-    result = {"per_group": round(sample_size_per_group), "total": round(sample_size_per_group * ${groups})}
+    per_group_theoretical = round(sample_size_per_group)
+    total_theoretical = round(sample_size_per_group * ${groups})
+    dropout_rate = ${dropout}
+    if dropout_rate > 0:
+        per_group_adjusted = math.ceil(per_group_theoretical / (1 - dropout_rate))
+        total_adjusted = math.ceil(total_theoretical / (1 - dropout_rate))
+        result = {"per_group": per_group_adjusted, "total": total_adjusted, "per_group_theoretical": per_group_theoretical, "total_theoretical": total_theoretical, "has_dropout": True}
+    else:
+        result = {"per_group": per_group_theoretical, "total": total_theoretical, "has_dropout": False}
 json.dumps(result)
 `;
             try {
                 let resultsJson = await pyodide.runPythonAsync(pythonCode);
                 let results = JSON.parse(resultsJson);
                 if (results.error) { throw new Error("Calculation failed in Python."); }
-                resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} participants per group)</small>`;
+                if (results.has_dropout) {
+                    resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} per group, adjusted for dropouts)<br>Theoretical: ${results.total_theoretical} total (${results.per_group_theoretical} per group)</small>`;
+                } else {
+                    resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} participants per group)</small>`;
+                }
             } catch (error) {
                 console.error("Calculation Error:", error);
                 // This is the correct, general error message
+                resultDiv.innerText = "Calculation not possible. The combination of parameters is outside logical limits. Try slightly changing one of the values.";
+                resultDiv.classList.add('error');
+            }
+        }
+
+        async function calculateProportionSampleSize(p1, p2, power, alpha, dropout) {
+            if (!pyodide) return;
+            const resultDiv = document.getElementById("result");
+            resultDiv.innerText = "Calculating...";
+            resultDiv.classList.remove('error');
+
+            // Parse and validate inputs as numbers
+            p1 = parseFloat(p1);
+            p2 = parseFloat(p2);
+            power = parseFloat(power);
+            alpha = parseFloat(alpha);
+            dropout = parseFloat(dropout);
+
+            // Validate all inputs are valid numbers
+            if (isNaN(p1) || isNaN(p2) || isNaN(power) || isNaN(alpha)) {
+                resultDiv.innerText = "All inputs must be valid numbers.";
+                resultDiv.classList.add('error');
+                return;
+            }
+
+            // Validate proportions are within valid range (matching HTML min/max of 0.01-0.99)
+            if (p1 < 0.01 || p1 > 0.99 || p2 < 0.01 || p2 > 0.99) {
+                resultDiv.innerText = "P1 and P2 must be between 0.01 and 0.99.";
+                resultDiv.classList.add('error');
+                return;
+            }
+
+            // Use tolerance for floating-point comparison
+            if (Math.abs(p1 - p2) < 0.001) {
+                resultDiv.innerText = "P1 and P2 must be different to detect an effect.";
+                resultDiv.classList.add('error');
+                return;
+            }
+
+            const pythonCode = `
+from statsmodels.stats.proportion import proportion_effectsize
+from statsmodels.stats.power import NormalIndPower
+import json
+import math
+
+p1 = ${p1}
+p2 = ${p2}
+power_val = ${power}
+alpha_val = ${alpha}
+dropout_rate = ${dropout}
+
+# Calculate Cohen's h effect size for two proportions
+effect_size = proportion_effectsize(p1, p2)
+
+# Use NormalIndPower to solve for sample size
+analysis = NormalIndPower()
+sample_size_per_group = analysis.solve_power(effect_size=abs(effect_size), power=power_val, alpha=alpha_val, ratio=1.0, alternative='two-sided')
+
+# Minimum sample size of 2 is required for valid statistical inference (at least 2 per group)
+if sample_size_per_group is None or sample_size_per_group < 2:
+    result = {"error": True}
+else:
+    per_group_theoretical = round(sample_size_per_group)
+    total_theoretical = round(sample_size_per_group * 2)
+    if dropout_rate > 0:
+        per_group_adjusted = math.ceil(per_group_theoretical / (1 - dropout_rate))
+        total_adjusted = math.ceil(total_theoretical / (1 - dropout_rate))
+        result = {"per_group": per_group_adjusted, "total": total_adjusted, "per_group_theoretical": per_group_theoretical, "total_theoretical": total_theoretical, "effect_size": round(abs(effect_size), 3), "has_dropout": True}
+    else:
+        result = {"per_group": per_group_theoretical, "total": total_theoretical, "effect_size": round(abs(effect_size), 3), "has_dropout": False}
+json.dumps(result)
+`;
+            try {
+                let resultsJson = await pyodide.runPythonAsync(pythonCode);
+                let results = JSON.parse(resultsJson);
+                if (results.error) { throw new Error("Calculation failed in Python."); }
+                if (results.has_dropout) {
+                    resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} per group, Cohen's h = ${results.effect_size}, adjusted for dropouts)<br>Theoretical: ${results.total_theoretical} total (${results.per_group_theoretical} per group)</small>`;
+                } else {
+                    resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} per group, Cohen's h = ${results.effect_size})</small>`;
+                }
+            } catch (error) {
+                console.error("Calculation Error:", error);
                 resultDiv.innerText = "Calculation not possible. The combination of parameters is outside logical limits. Try slightly changing one of the values.";
                 resultDiv.classList.add('error');
             }

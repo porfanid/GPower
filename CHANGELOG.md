@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2025-11-30
+
+### Added
+
+-   **Two Proportions Power Analysis**: New analysis type for calculating sample sizes when comparing two independent proportions (dichotomous outcomes), using Cohen's *h* effect size. Ideal for clinical trials comparing treatment vs. control success rates.
+-   **Real-time Cohen's h Display**: Cohen's h effect size is now calculated and displayed in real-time as users adjust the baseline and treatment proportions.
+-   **Dropout Rate Adjustment**: New slider (0-50%) to account for expected participant dropouts, available in both Groups and Proportions modes. Sample size is adjusted using the formula: Required Sample = Theoretical Sample / (1 - Dropout Rate).
+-   **Analysis Type Selector**: Dropdown menu to switch between "Groups (T-Test / ANOVA)" and "Two Proportions" analysis modes.
+
+### Changed
+
+-   **Updated Labels**: Proportion inputs now use clearer labels: "Baseline Rate / Control Group" and "Expected Treatment Rate".
+-   **Enhanced Results Display**: When dropout rate is set, results show both adjusted and theoretical sample sizes.
+-   **Updated Documentation**: README, CITATION.cff, and .zenodo.json updated to reflect new features.
+
 ## [1.0.0] - 2025-03-15
 
 ### Added

@@ -2,11 +2,13 @@
 
 [![DOI](https://zenodo.org/badge/1106672819.svg)](https://doi.org/10.5281/zenodo.17768003)
 
-A web-based sample size calculator for statistical power analysis, supporting ANOVA and T-Test calculations.
+**[🔗 Launch GPower Web Tool](https://orfanidis.net.gr/GPower/)**
+
+A web-based sample size calculator for statistical power analysis, supporting T-Test, ANOVA, and Two Proportions calculations.
 
 ## Usage
 
-Simply visit the [GPower Web Tool](https://porfanid.github.io/GPower/) in a modern web browser. The tool will:
+Simply visit the [GPower Web Tool](https://orfanidis.net.gr/GPower/) in a modern web browser. The tool will:
 
 1. Load the Python statistics engine (statsmodels)
 2. Present an interactive interface for entering parameters
@@ -14,8 +16,20 @@ Simply visit the [GPower Web Tool](https://porfanid.github.io/GPower/) in a mode
 
 ## Features
 
-- **T-Test Power Analysis**: Calculate required sample sizes for independent samples t-tests using Cohen's d effect size
-- **ANOVA Power Analysis**: Calculate required sample sizes for one-way ANOVA using Cohen's f effect size
+### Analysis Types
+
+- **Groups (T-Test / ANOVA)**: Calculate required sample sizes for comparing group means
+  - T-Test: For comparing 2 groups using Cohen's d effect size
+  - ANOVA: For comparing 3+ groups using Cohen's f effect size
+  
+- **Two Proportions**: Calculate required sample sizes for comparing two independent proportions (dichotomous outcomes)
+  - Uses Cohen's h effect size (displayed in real-time)
+  - Ideal for clinical trials comparing treatment vs. control success rates
+
+### Additional Features
+
+- **Dropout Rate Adjustment**: Account for expected participant dropouts using the formula:
+  $$\text{Required Sample} = \frac{\text{Theoretical Sample}}{1 - \text{Dropout Rate}}$$
 - **Interactive Interface**: Real-time calculations with intuitive sliders and input controls
 - **Effect Size Presets**: Quick selection of small, medium, and large effect sizes based on Cohen's conventions
 - **Mobile Responsive**: Works seamlessly on both desktop and mobile devices
@@ -23,10 +37,20 @@ Simply visit the [GPower Web Tool](https://porfanid.github.io/GPower/) in a mode
 
 ### Parameters
 
+#### Groups Mode (T-Test / ANOVA)
 - **Number of Groups**: 2 for T-test, 3+ for ANOVA
 - **Effect Size**: Expected magnitude of the effect (Cohen's d for T-test, Cohen's f for ANOVA)
 - **Statistical Power**: Probability of detecting an effect if it exists (typically 0.80)
 - **Significance Level (alpha)**: Risk of Type I error (typically 0.05)
+- **Expected Dropout Rate**: Percentage of participants expected to drop out (0-50%)
+
+#### Two Proportions Mode
+- **Baseline Rate / Control Group**: Expected proportion in the control group (e.g., 0.50)
+- **Expected Treatment Rate**: Expected proportion in the treatment group (e.g., 0.70)
+- **Cohen's h**: Effect size calculated automatically from the two proportions
+- **Statistical Power**: Probability of detecting an effect if it exists (typically 0.80)
+- **Significance Level (alpha)**: Risk of Type I error (typically 0.05)
+- **Expected Dropout Rate**: Percentage of participants expected to drop out (0-50%)
 
 ## Methodological References
 
@@ -34,7 +58,7 @@ The GPower tool's calculations are based on established statistical methods and 
 
 ### Foundational Theory (Power Analysis & Effect Sizes)
 
-The principles of power analysis and the conventions for effect sizes (Cohen's *d* and *f*) are based on the seminal work in this field:
+The principles of power analysis and the conventions for effect sizes (Cohen's *d*, *f*, and *h*) are based on the seminal work in this field:
 
 > **Cohen, J. (1988). [*Statistical power analysis for the behavioral sciences*](https://doi.org/10.4324/9780203771587) (2nd ed.). Lawrence Erlbaum Associates.**
 
