@@ -64,9 +64,11 @@ The principles of power analysis and the conventions for effect sizes (Cohen's *
 
 ### Computational Engine
 
-The real-time calculations rely on the statistical models implemented in the Python `statsmodels` library, which is run in the browser via Pyodide.
+The real-time calculations rely on the statistical models implemented in the Python `statsmodels` library, which is run in the browser via Pyodide. This library provides the power functions for Means (T-Test/ANOVA) and Proportions (Normal Approximation).
 
 > **Seabold, S., & Perktold, J. (2010). [*Statsmodels: Econometric and statistical modeling with python*](https://proceedings.scipy.org/articles/Majora-92bf1922-011). *Proceedings of the 9th Python in Science Conference*.**
+
+***
 
 ***
 
