@@ -1,6 +1,6 @@
 # GPower
 
-[![DOI](https://zenodo.org/badge/951497112.svg)](https://doi.org/10.5281/zenodo.15053975)
+[![DOI](https://zenodo.org/badge/1106672819.svg)](https://doi.org/10.5281/zenodo.17768003)
 
 A web-based sample size calculator for statistical power analysis, supporting ANOVA and T-Test calculations.
 

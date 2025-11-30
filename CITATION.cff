@@ -5,7 +5,7 @@ authors:
     given-names: "Pavlos"
 title: "GPower: Web-based Sample Size Calculator for ANOVA and T-Test"
 version: 1.0.0
-doi: 10.5281/zenodo.15053975
+doi: 10.5281/zenodo.17768003
 date-released: 2025-03-15
 url: "https://github.com/porfanid/GPower"
 repository-code: "https://github.com/porfanid/GPower"
