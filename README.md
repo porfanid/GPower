@@ -28,34 +28,32 @@ Simply visit the [GPower Web Tool](https://porfanid.github.io/GPower/) in a mode
 - **Statistical Power**: Probability of detecting an effect if it exists (typically 0.80)
 - **Significance Level (alpha)**: Risk of Type I error (typically 0.05)
 
+## Methodological References
+
+The GPower tool's calculations are based on established statistical methods and implemented using a widely-cited, open-source Python library. We recommend citing the following works in your research to validate the methodological approach:
+
+### Foundational Theory (Power Analysis & Effect Sizes)
+
+The principles of power analysis and the conventions for effect sizes (Cohen's *d* and *f*) are based on the seminal work in this field:
+
+> **Cohen, J. (1988). [*Statistical power analysis for the behavioral sciences*](https://doi.org/10.4324/9780203771587) (2nd ed.). Lawrence Erlbaum Associates.**
+
+### Computational Engine
+
+The real-time calculations rely on the statistical models implemented in the Python `statsmodels` library, which is run in the browser via Pyodide.
+
+> **Seabold, S., & Perktold, J. (2010). [*Statsmodels: Econometric and statistical modeling with python*](https://proceedings.scipy.org/articles/Majora-92bf1922-011). *Proceedings of the 9th Python in Science Conference*.**
+
+***
+
 ## Citation
 
-If you use this tool in your research, please cite it using the following:
+To ensure you use the most current and accurate citation for this software, please use the citation feature provided by GitHub.
 
-> Orfanidis, P. (2025). GPower: Web-based Sample Size Calculator for ANOVA and T-Test (Version 1.0.0) [Computer software]. https://doi.org/10.5281/zenodo.15053975
+Click the **"Cite this repository"** button (usually visible on the right sidebar of the GitHub repository page) to find various formats (e.g., APA, BibTeX) generated automatically from the `CITATION.cff` file.
 
-### BibTeX
-
-```bibtex
-@software{orfanidis_gpower_2025,
-  author       = {Orfanidis, Pavlos},
-  title        = {GPower: Web-based Sample Size Calculator for ANOVA and T-Test},
-  year         = 2025,
-  publisher    = {Zenodo},
-  version      = {1.0.0},
-  doi          = {10.5281/zenodo.15053975},
-  url          = {https://doi.org/10.5281/zenodo.15053975}
-}
-```
+***
 
 ## License
 
 This project is open source and available under the MIT License.
-
-## Author
-
-**Pavlos Orfanidis**
-
----
-
-[![DOI](https://zenodo.org/badge/951497112.svg)](https://doi.org/10.5281/zenodo.15053975)
