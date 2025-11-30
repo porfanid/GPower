@@ -497,14 +497,28 @@ json.dumps(result)
             resultDiv.innerText = "Calculating...";
             resultDiv.classList.remove('error');
 
-            // Validate inputs
-            if (p1 <= 0 || p1 >= 1 || p2 <= 0 || p2 >= 1) {
-                resultDiv.innerText = "P1 and P2 must be between 0 and 1 (exclusive).";
+            // Parse and validate inputs as numbers
+            p1 = parseFloat(p1);
+            p2 = parseFloat(p2);
+            power = parseFloat(power);
+            alpha = parseFloat(alpha);
+
+            // Validate all inputs are valid numbers
+            if (isNaN(p1) || isNaN(p2) || isNaN(power) || isNaN(alpha)) {
+                resultDiv.innerText = "All inputs must be valid numbers.";
                 resultDiv.classList.add('error');
                 return;
             }
 
-            if (p1 === p2) {
+            // Validate proportions are within valid range (matching HTML min/max of 0.01-0.99)
+            if (p1 < 0.01 || p1 > 0.99 || p2 < 0.01 || p2 > 0.99) {
+                resultDiv.innerText = "P1 and P2 must be between 0.01 and 0.99.";
+                resultDiv.classList.add('error');
+                return;
+            }
+
+            // Use tolerance for floating-point comparison
+            if (Math.abs(p1 - p2) < 0.001) {
                 resultDiv.innerText = "P1 and P2 must be different to detect an effect.";
                 resultDiv.classList.add('error');
                 return;
@@ -527,6 +541,7 @@ effect_size = proportion_effectsize(p1, p2)
 analysis = NormalIndPower()
 sample_size_per_group = analysis.solve_power(effect_size=abs(effect_size), power=power_val, alpha=alpha_val, ratio=1.0, alternative='two-sided')
 
+# Minimum sample size of 2 is required for valid statistical inference (at least 2 per group)
 if sample_size_per_group is None or sample_size_per_group < 2:
     result = {"error": True}
 else:
