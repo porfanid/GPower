@@ -1,39 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="preload" as="image" href="https://zenodo.org/badge/1106672819.svg">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>G-Power Web Tool (ANOVA & T-Test)</title>
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+    <link rel="preconnect" href="https://zenodo.org">
     <style>
         /* Base styles are made more flexible */
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             line-height: 1.6; 
-            /* MAX-WIDTH REMOVED for full responsiveness on mobile */
-            margin: 0; /* Changed from 40px auto */
+            margin: 0; 
             padding: 0; 
-            background-color: #f9f9f9; 
+            /* --- MODERNIZATION: Subtle Gradient Background --- */
+            background: linear-gradient(to bottom right, #eef4f8, #f8f8f8); 
             color: #333; 
+            min-height: 100vh; /* Ensure full height for gradient */
         }
         .container { 
             background-color: #fff; 
             padding: 30px; 
-            border-radius: 0; /* Removed border-radius on mobile for full-width look */
-            box-shadow: none; /* Removed box-shadow on mobile */
-            min-height: 100vh; /* Ensure container covers full screen height */
+            border-radius: 12px; /* Increased radius */
+            /* --- MODERNIZATION: Deeper, Softer Shadow --- */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); 
+            min-height: auto; 
         }
-        h1, h2 { text-align: center; color: #2c3e50; }
+        h1, h2 { 
+            text-align: center; 
+            color: #2c3e50; 
+            font-weight: 300; /* Lighter font weight for modern feel */
+        }
         .control-group { margin-bottom: 25px; }
-        label { font-weight: bold; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-        /* Inputs */
-        input[type="range"], input[type="number"] { width: 100%; cursor: pointer; }
-        input[type="number"] { padding: 8px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; } /* box-sizing added for consistent padding/width */
-        .value-display { font-weight: normal; color: #2980b9; transition: color 0.3s; }
-        .value-display.warning { color: #f39c12; font-weight: bold; }
+        label { font-weight: 600; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
         
-        /* Tooltip Adjustments for Mobile */
-        .tooltip { position: relative; display: inline-block; cursor: pointer; border-bottom: 1px dotted black; }
+        /* Inputs */
+        input[type="range"] { 
+            width: 100%; 
+            cursor: pointer; 
+        }
+        input[type="number"] { 
+            padding: 10px; /* Slightly more padding */
+            border-radius: 8px; /* Softer corners */
+            border: 1px solid #ddd; 
+            box-sizing: border-box; 
+            transition: border-color 0.3s, box-shadow 0.3s; /* Smooth transitions */
+        } 
+        input[type="number"]:focus {
+            border-color: #3498db; /* Blue focus highlight */
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+            outline: none;
+        }
+
+        /* Value Display and Warning */
+        .value-display { 
+            font-weight: 700; 
+            color: #3498db; /* Accent color for value */
+            transition: color 0.3s; 
+            padding: 2px 6px;
+            border-radius: 4px;
+            background-color: #ecf0f1; /* Light background for contrast */
+        }
+        .value-display.warning { 
+            color: #e67e22; 
+            font-weight: bold; 
+            background-color: #fef0db; 
+        }
+        
+        /* Tooltip Adjustments */
+        .tooltip { position: relative; display: inline-block; cursor: pointer; border-bottom: 1px dotted #999; }
         .tooltip .tooltiptext { 
             visibility: hidden; 
             width: 240px; 
@@ -53,36 +88,62 @@
         .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
         
         /* Presets are flexed for better spacing on mobile */
-        .presets { display: flex; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+        .presets { display: flex; flex-wrap: wrap; align-items: center; margin-top: 10px; gap: 8px; }
         .presets small { flex: 1 1 100%; margin-bottom: 8px; font-size: 0.9em; }
         .presets button { 
-            background-color: #ecf0f1; 
-            border: 1px solid #bdc3c7; 
-            padding: 8px 12px; /* Increased padding */
-            margin-right: 10px; /* Increased margin */
-            border-radius: 4px; 
+            background-color: #f0f3f5; 
+            border: 1px solid #ddd; 
+            padding: 10px 15px; 
+            border-radius: 6px; 
             cursor: pointer; 
-            flex-grow: 1; /* Allow buttons to grow */
-            min-width: 80px; /* Ensure a minimum touch target size */
+            flex-grow: 1; 
+            min-width: 80px; 
+            font-weight: 600;
+            color: #555;
+            /* --- MODERNIZATION: Button Hover Animation --- */
+            transition: background-color 0.2s ease, transform 0.1s; 
         }
-        .presets button:hover { background-color: #e0e6e8; }
+        .presets button:hover { 
+            background-color: #3498db; 
+            color: white;
+            transform: translateY(-1px); /* Subtle lift */
+        }
         
+        /* --- MODERNIZATION: Result Box Styling --- */
         #result { 
-            background-color: #2980b9; 
+            background: #3498db; 
             color: white; 
-            padding: 20px; /* Increased padding */
-            border-radius: 5px; 
+            padding: 25px; 
+            border-radius: 12px; 
             text-align: center; 
-            font-size: 1.6em; /* Slightly larger font */
-            transition: background-color 0.3s; 
-            margin-top: 20px;
+            font-size: 1.8em; 
+            font-weight: 700;
+            transition: background-color 0.3s, transform 0.3s; 
+            margin-top: 25px;
+            box-shadow: 0 6px 15px rgba(52, 152, 219, 0.3); /* Subtle blue glow */
         }
-        #result small { font-size: 0.5em; display: block; margin-top: 5px; } /* Ensure small text is legible */
-        #result.error { background-color: #e74c3c; }
-        #loader { text-align: center; color: #7f8c8d; padding-top: 50px; } /* Added padding for better mobile center */
-        #progress-container { width: 90%; margin: 15px auto 0; background-color: #eee; border-radius: 4px; overflow: hidden; height: 20px; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1); }
-        #progress-bar { height: 100%; width: 0%; background-color: #3498db; transition: width 0.3s ease; }
-        #progress-text { margin-top: 10px; font-weight: bold; }
+        #result small { font-size: 0.5em; display: block; margin-top: 5px; font-weight: 400; } 
+        #result.error { 
+            background-color: #e74c3c; 
+            box-shadow: 0 6px 15px rgba(231, 76, 60, 0.3); 
+        }
+        
+        /* Loader and Progress Bar */
+        #loader { text-align: center; color: #7f8c8d; padding-top: 50px; } 
+        #progress-container { width: 90%; margin: 15px auto 0; background-color: #ddd; border-radius: 4px; overflow: hidden; height: 10px; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1); }
+        #progress-bar { height: 100%; width: 0%; background-color: #2ecc71; transition: width 0.3s ease; }
+        #progress-text { margin-top: 10px; font-weight: bold; color: #555; }
+
+        /* Footer / Metadata area cleanup */
+        .footer-metadata a {
+            color: #3498db;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        .footer-metadata a:hover {
+            color: #2980b9;
+            text-decoration: underline;
+        }
 
         /* Media Query for larger screens (e.g., desktop/tablet) */
         @media (min-width: 768px) {
@@ -92,13 +153,13 @@
             .container { 
                 max-width: 700px; 
                 margin: 0 auto; 
-                padding: 30px; 
-                border-radius: 8px; 
-                box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+                padding: 40px; 
+                border-radius: 12px; 
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
                 min-height: auto;
             }
             .presets button {
-                flex-grow: 0; /* Reset flex grow on desktop */
+                flex-grow: 0; 
                 min-width: auto;
             }
         }
@@ -117,6 +178,7 @@
         </div>
 
         <div id="app" style="display:none;">
+            
             <div class="control-group">
                 <label for="groups">
                     <span class="tooltip">Number of Groups
@@ -125,6 +187,8 @@
                 </label>
                 <input type="number" id="groups" value="2" min="2" max="10" oninput="updateValues()">
             </div>
+            
+            
             <div class="control-group">
                 <label>
                     <span class="tooltip">Effect Size
@@ -140,6 +204,7 @@
                     <button id="preset-large" onclick="setEffectSize(0.8)">Large</button>
                 </div>
             </div>
+            
             <div class="control-group">
                 <label>
                      <span class="tooltip">Statistical Power
@@ -149,6 +214,7 @@
                 </label>
                 <input type="range" id="power" min="0.5" max="0.99" step="0.01" value="0.8" oninput="updateValues()">
             </div>
+            
             <div class="control-group">
                 <label>
                     <span class="tooltip">Significance Level (alpha)
@@ -156,25 +222,24 @@
                     </span>
                     <span id="alphaValue" class="value-display">0.05</span>
                 </label>
+                
                 <input type="range" id="alpha" min="0.01" max="0.1" step="0.01" value="0.05" oninput="updateValues()">
             </div>
+            
             <h2>Required Sample:</h2>
             <div id="result">...</div>
-            
-            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-                
-
-<a href="https://doi.org/10.5281/zenodo.17768003"><img src="https://zenodo.org/badge/1106672819.svg" alt="DOI: 10.5281/zenodo.17768003"></a>
-
+        </div>
+        
+        <div class="footer-metadata" style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                <a href="https://doi.org/10.5281/zenodo.17768003"><img src="https://zenodo.org/badge/1106672819.svg" alt="DOI: 10.5281/zenodo.17768003"></a>
 
                 <p style="font-size: 0.85em; color: #666; margin-top: 10px;">
                     Created by <strong>Pavlos Orfanidis</strong> • 
-                    <a href="https://github.com/porfanid/GPower" target="_blank" rel="noopener noreferrer" style="color: #2980b9;">View on GitHub</a>
+                    <a href="https://github.com/porfanid/GPower" target="_blank" rel="noopener noreferrer">View on GitHub</a>
                 </p>
             </div>
-        </div>
     </div>
-
+<script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
     <script type="text/javascript">
         let pyodide;
         
