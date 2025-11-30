@@ -19,5 +19,6 @@
         "statsmodels"
     ],
     "upload_type": "software",
-    "access_right": "open"
+    "access_right": "open",
+    "version_url": "https://orfanidis.net.gr/GPower"
 }
