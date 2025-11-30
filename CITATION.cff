@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Orfanidis"
+    given-names: "Pavlos"
+title: "GPower: Web-based Sample Size Calculator for ANOVA and T-Test"
+version: 1.0.0
+doi: 10.5281/zenodo.15053975
+date-released: 2025-03-15
+url: "https://github.com/porfanid/GPower"
+repository-code: "https://github.com/porfanid/GPower"
+license: MIT
+type: software
+keywords:
+  - sample-size
+  - power-analysis
+  - statistics
+  - anova
+  - t-test
+  - cohen-d
+  - cohen-f
+abstract: "A web-based sample size calculator for statistical power analysis, supporting ANOVA and T-Test calculations. The tool runs entirely in the browser using Pyodide (Python in WebAssembly) and provides real-time calculations with an intuitive interface."
