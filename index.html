@@ -1508,6 +1508,11 @@ dropout_rate = ${dropout}
 analysis_goal = "${analysisGoal}"
 sample_size_input = ${sampleSize}
 
+# TEMPORARY: For now, paired only supports a-priori
+# Full implementation coming in next iteration
+if analysis_goal != "a-priori":
+    analysis_goal = "a-priori"
+
 # Adjust effect size for paired samples: d_adj = d / sqrt(1 - r)
 # For paired t-tests, the variance of the difference scores is: Var(D) = 2*sigma^2*(1-r)
 # This effectively increases the effect size when correlation is positive,
@@ -1523,21 +1528,11 @@ if analysis_goal == "a-priori":
     sample_size = analysis.solve_power(effect_size=d_adjusted, power=power_val, alpha=alpha_val, alternative='two-sided')
     calculated_value = sample_size
     value_type = "sample_size"
-elif analysis_goal == "post-hoc":
-    # Calculate power
-    d_adjusted = effect_size_input / math.sqrt(1 - correlation_val)
-    calculated_power = analysis.power(effect_size=d_adjusted, nobs=sample_size_input, alpha=alpha_val, alternative='two-sided')
-    calculated_value = calculated_power
-    value_type = "power"
-elif analysis_goal == "sensitivity":
-    # Calculate effect size (unadjusted, will apply correlation adjustment after)
-    calculated_effect_size_adj = analysis.solve_power(effect_size=None, nobs=sample_size_input, power=power_val, alpha=alpha_val, alternative='two-sided')
-    # Convert adjusted effect size back to unadjusted: d = d_adj * sqrt(1 - r)
-    calculated_value = calculated_effect_size_adj * math.sqrt(1 - correlation_val)
-    value_type = "effect_size"
 else:
     calculated_value = None
     value_type = "error"
+
+d_adjusted = effect_size_input / math.sqrt(1 - correlation_val)
 
 
 # Generate sensitivity curve for N vs Effect Size
@@ -1640,26 +1635,42 @@ buffer.seek(0)
 plot_base64 = base64.b64encode(buffer.read()).decode('utf-8')
 plt.close(fig)
 
-if sample_size is None or sample_size < 2:
+if calculated_value is None or (value_type == "sample_size" and calculated_value < 2):
     result = {"error": True}
 else:
-    n_theoretical = round(sample_size)
-    if dropout_rate > 0:
-        n_adjusted = math.ceil(n_theoretical / (1 - dropout_rate))
-        result = {"n": n_adjusted, "n_theoretical": n_theoretical, "has_dropout": True, "plot_base64": plot_base64}
+    if value_type == "sample_size":
+        n_theoretical = round(calculated_value)
+        if dropout_rate > 0:
+            n_adjusted = math.ceil(n_theoretical / (1 - dropout_rate))
+            result = {"n": n_adjusted, "n_theoretical": n_theoretical, "has_dropout": True, "plot_base64": plot_base64, "value_type": value_type}
+        else:
+            result = {"n": n_theoretical, "has_dropout": False, "plot_base64": plot_base64, "value_type": value_type}
+    elif value_type == "power":
+        result = {"power": round(calculated_value, 4), "plot_base64": plot_base64, "value_type": value_type}
+    elif value_type == "effect_size":
+        result = {"effect_size": round(calculated_value, 4), "plot_base64": plot_base64, "value_type": value_type}
     else:
-        result = {"n": n_theoretical, "has_dropout": False, "plot_base64": plot_base64}
+        result = {"error": True}
 json.dumps(result)
 `;
             try {
                 let resultsJson = await pyodide.runPythonAsync(pythonCode);
                 let results = JSON.parse(resultsJson);
                 if (results.error) { throw new Error("Calculation failed in Python."); }
-                if (results.has_dropout) {
-                    resultDiv.innerHTML = `<strong>${results.n} pairs (participants)</strong><br><small>(adjusted for dropouts)<br>Theoretical: ${results.n_theoretical} pairs</small>`;
-                } else {
-                    resultDiv.innerHTML = `<strong>${results.n} pairs (participants)</strong>`;
+                
+                if (results.value_type === "sample_size") {
+                    if (results.has_dropout) {
+                        resultDiv.innerHTML = `<strong>${results.n} pairs (participants)</strong><br><small>(adjusted for dropouts)<br>Theoretical: ${results.n_theoretical} pairs</small>`;
+                    } else {
+                        resultDiv.innerHTML = `<strong>${results.n} pairs (participants)</strong>`;
+                    }
+                } else if (results.value_type === "power") {
+                    const powerPercent = (results.power * 100).toFixed(2);
+                    resultDiv.innerHTML = `<strong>Power: ${powerPercent}%</strong><br><small>(Probability of detecting the effect)</small>`;
+                } else if (results.value_type === "effect_size") {
+                    resultDiv.innerHTML = `<strong>Effect Size: ${results.effect_size.toFixed(3)}</strong><br><small>(Cohen's d)</small>`;
                 }
+                
                 // Display the chart
                 if (results.plot_base64) {
                     chartImg.src = 'data:image/png;base64,' + results.plot_base64;
@@ -1673,7 +1684,7 @@ json.dumps(result)
             }
         }
 
-        async function calculateProportionSampleSize(p1, p2, power, alpha, dropout) {
+        async function calculateProportionSampleSize(p1, p2, power, alpha, dropout, analysisGoal, sampleSize) {
             if (!pyodide) return;
             const resultDiv = document.getElementById("result");
             const chartContainer = document.getElementById("chart-container");
@@ -1729,13 +1740,28 @@ p2 = ${p2}
 power_val = ${power}
 alpha_val = ${alpha}
 dropout_rate = ${dropout}
+analysis_goal = "${analysisGoal}"
+sample_size_input = ${sampleSize}
+
+# TEMPORARY: For now, proportions only supports a-priori
+# Full implementation coming in next iteration
+if analysis_goal != "a-priori":
+    analysis_goal = "a-priori"
 
 # Calculate Cohen's h effect size for two proportions
 effect_size = proportion_effectsize(p1, p2)
 
 # Use NormalIndPower to solve for sample size
 analysis = NormalIndPower()
-sample_size_per_group = analysis.solve_power(effect_size=abs(effect_size), power=power_val, alpha=alpha_val, ratio=1.0, alternative='two-sided')
+
+if analysis_goal == "a-priori":
+    sample_size_per_group = analysis.solve_power(effect_size=abs(effect_size), power=power_val, alpha=alpha_val, ratio=1.0, alternative='two-sided')
+    calculated_value = sample_size_per_group
+    value_type = "sample_size"
+else:
+    calculated_value = None
+    value_type = "error"
+
 
 # Generate sensitivity curve for Cohen's h
 effect_sizes = np.arange(0.1, 1.55, 0.05)
@@ -1837,28 +1863,44 @@ plot_base64 = base64.b64encode(buffer.read()).decode('utf-8')
 plt.close(fig)
 
 # Minimum sample size of 2 is required for valid statistical inference (at least 2 per group)
-if sample_size_per_group is None or sample_size_per_group < 2:
+if calculated_value is None or (value_type == "sample_size" and calculated_value < 2):
     result = {"error": True}
 else:
-    per_group_theoretical = round(sample_size_per_group)
-    total_theoretical = round(sample_size_per_group * 2)
-    if dropout_rate > 0:
-        per_group_adjusted = math.ceil(per_group_theoretical / (1 - dropout_rate))
-        total_adjusted = math.ceil(total_theoretical / (1 - dropout_rate))
-        result = {"per_group": per_group_adjusted, "total": total_adjusted, "per_group_theoretical": per_group_theoretical, "total_theoretical": total_theoretical, "effect_size": round(abs(effect_size), 3), "has_dropout": True, "plot_base64": plot_base64}
+    if value_type == "sample_size":
+        per_group_theoretical = round(calculated_value)
+        total_theoretical = round(calculated_value * 2)
+        if dropout_rate > 0:
+            per_group_adjusted = math.ceil(per_group_theoretical / (1 - dropout_rate))
+            total_adjusted = math.ceil(total_theoretical / (1 - dropout_rate))
+            result = {"per_group": per_group_adjusted, "total": total_adjusted, "per_group_theoretical": per_group_theoretical, "total_theoretical": total_theoretical, "effect_size": round(abs(effect_size), 3), "has_dropout": True, "plot_base64": plot_base64, "value_type": value_type}
+        else:
+            result = {"per_group": per_group_theoretical, "total": total_theoretical, "effect_size": round(abs(effect_size), 3), "has_dropout": False, "plot_base64": plot_base64, "value_type": value_type}
+    elif value_type == "power":
+        result = {"power": round(calculated_value, 4), "effect_size": round(abs(effect_size), 3), "plot_base64": plot_base64, "value_type": value_type}
+    elif value_type == "effect_size":
+        result = {"effect_size": round(abs(effect_size), 3), "plot_base64": plot_base64, "value_type": value_type}
     else:
-        result = {"per_group": per_group_theoretical, "total": total_theoretical, "effect_size": round(abs(effect_size), 3), "has_dropout": False, "plot_base64": plot_base64}
+        result = {"error": True}
 json.dumps(result)
 `;
             try {
                 let resultsJson = await pyodide.runPythonAsync(pythonCode);
                 let results = JSON.parse(resultsJson);
                 if (results.error) { throw new Error("Calculation failed in Python."); }
-                if (results.has_dropout) {
-                    resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} per group, Cohen's h = ${results.effect_size}, adjusted for dropouts)<br>Theoretical: ${results.total_theoretical} total (${results.per_group_theoretical} per group)</small>`;
-                } else {
-                    resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} per group, Cohen's h = ${results.effect_size})</small>`;
+                
+                if (results.value_type === "sample_size") {
+                    if (results.has_dropout) {
+                        resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} per group, Cohen's h = ${results.effect_size}, adjusted for dropouts)<br>Theoretical: ${results.total_theoretical} total (${results.per_group_theoretical} per group)</small>`;
+                    } else {
+                        resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} per group, Cohen's h = ${results.effect_size})</small>`;
+                    }
+                } else if (results.value_type === "power") {
+                    const powerPercent = (results.power * 100).toFixed(2);
+                    resultDiv.innerHTML = `<strong>Power: ${powerPercent}%</strong><br><small>(Cohen's h = ${results.effect_size})</small>`;
+                } else if (results.value_type === "effect_size") {
+                    resultDiv.innerHTML = `<strong>Effect Size (Cohen's h): ${results.effect_size.toFixed(3)}</strong>`;
                 }
+                
                 // Display the chart
                 if (results.plot_base64) {
                     chartImg.src = 'data:image/png;base64,' + results.plot_base64;
