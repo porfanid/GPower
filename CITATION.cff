@@ -4,7 +4,7 @@ authors:
   - family-names: "Orfanidis"
     given-names: "Pavlos"
 title: "GPower: Web-based Sample Size Calculator for Power Analysis"
-version: 3.1.0
+version: 3.0.0
 doi: 10.5281/zenodo.17768003
 date-released: 2025-12-01
 url: "https://orfanidis.net.gr/GPower"

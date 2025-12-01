@@ -1,6 +1,6 @@
 {
     "title": "GPower Sample Size Calculator",
-    "description": "A web-based sample size calculator for statistical power analysis using Pyodide, statsmodels, and matplotlib. Supports T-test, ANOVA, Paired T-Test, and Two Proportions power analysis with sensitivity analysis charts, dropout rate adjustment, and real-time calculations in the browser. <a href=\"https://orfanidis.net.gr/GPower/\">Go to Live</a>",
+    "description": "A web-based sample size calculator for statistical power analysis using Pyodide, statsmodels, and matplotlib. Supports T-test, ANOVA, Paired T-Test, and Two Proportions power analysis with sensitivity analysis charts, dropout rate adjustment, and real-time calculations in the browser.",
     "creators": [
         {
             "name": "Pavlos Orfanidis",
@@ -26,6 +26,17 @@
     ],
     "upload_type": "software",
     "access_right": "open",
-    "version": "3.1.0",
-    "version_url": "https://orfanidis.net.gr/GPower"
+    "version": "3.0.0",
+    "related_identifiers": [
+        {
+            "identifier": "https://orfanidis.net.gr/GPower/",
+            "relation": "isSupplementedBy",
+            "resource_type": "software"
+        },
+        {
+            "identifier": "https://github.com/porfanid/GPower",
+            "relation": "isSupplementTo",
+            "resource_type": "software"
+        }
+    ]
 }
