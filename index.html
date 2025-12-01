@@ -583,7 +583,7 @@ ax.grid(True, linestyle='-', alpha=0.3)
 # Mark Cohen's d conventions for T-test
 conventions = [(0.2, 'Small'), (0.5, 'Medium'), (0.8, 'Large')]
 for es_conv, label in conventions:
-    if len(valid_es) > 0 and (es_conv in valid_es or (min(valid_es) <= es_conv <= max(valid_es))):
+    if len(valid_es) > 0 and min(valid_es) <= es_conv <= max(valid_es):
         try:
             n_conv = analysis.solve_power(effect_size=es_conv, power=power_val, alpha=alpha_val, ratio=1.0)
             if n_conv is not None and n_conv >= 2:
@@ -660,7 +660,7 @@ ax.grid(True, linestyle='-', alpha=0.3)
 # Mark Cohen's f conventions for ANOVA
 conventions = [(0.10, 'Small'), (0.25, 'Medium'), (0.40, 'Large')]
 for es_conv, label in conventions:
-    if len(valid_es) > 0 and (es_conv in valid_es or (min(valid_es) <= es_conv <= max(valid_es))):
+    if len(valid_es) > 0 and min(valid_es) <= es_conv <= max(valid_es):
         try:
             n_conv = analysis.solve_power(effect_size=es_conv, k_groups=k_groups, power=power_val, alpha=alpha_val)
             if n_conv is not None and n_conv >= 2:
@@ -756,7 +756,9 @@ correlation_val = ${correlation}
 dropout_rate = ${dropout}
 
 # Adjust effect size for paired samples: d_adj = d / sqrt(1 - r)
-# This accounts for the correlation between paired measurements
+# For paired t-tests, the variance of the difference scores is: Var(D) = 2*sigma^2*(1-r)
+# This effectively increases the effect size when correlation is positive,
+# requiring fewer participants than independent samples for the same power.
 d_adjusted = effect_size_input / math.sqrt(1 - correlation_val)
 
 # Use TTestPower for paired t-test (one-sample test on differences)
@@ -792,7 +794,7 @@ ax.grid(True, linestyle='-', alpha=0.3)
 # Mark Cohen's d conventions
 conventions = [(0.2, 'Small'), (0.5, 'Medium'), (0.8, 'Large')]
 for es_conv, label in conventions:
-    if len(valid_es) > 0 and (es_conv in valid_es or (min(valid_es) <= es_conv <= max(valid_es))):
+    if len(valid_es) > 0 and min(valid_es) <= es_conv <= max(valid_es):
         try:
             es_adj = es_conv / math.sqrt(1 - correlation_val)
             n_conv = analysis.solve_power(effect_size=es_adj, power=power_val, alpha=alpha_val, alternative='two-sided')
