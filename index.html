@@ -1977,7 +1977,7 @@ elif analysis_goal == "post-hoc":
             power_values.append(None)
     
     # Generate sensitivity curve for Power vs N
-    n_range = np.arange(max(4, sample_size_input * 0.5), sample_size_input * 2, max(2, int(sample_size_input * 0.02)))
+    n_range = np.arange(max(4, sample_size_input * 0.5), sample_size_input * 2, max(2, min(10, int(sample_size_input * 0.02))))
     n_power_values = []
     for n_total in n_range:
         try:
@@ -2004,7 +2004,7 @@ elif analysis_goal == "sensitivity":
             effect_size_values.append(None)
     
     # Generate sensitivity curve for Effect Size vs N
-    n_range = np.arange(max(4, sample_size_input * 0.5), sample_size_input * 2, max(2, int(sample_size_input * 0.02)))
+    n_range = np.arange(max(4, sample_size_input * 0.5), sample_size_input * 2, max(2, min(10, int(sample_size_input * 0.02))))
     n_effect_size_values = []
     for n_total in n_range:
         try:
