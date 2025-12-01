@@ -533,7 +533,7 @@ plt.plot(valid_es, valid_n, 'b-', linewidth=2, label='Required N')
 # Mark Cohen's d conventions for T-test
 conventions = [(0.2, 'Small'), (0.5, 'Medium'), (0.8, 'Large')]
 for es_conv, label in conventions:
-    if es_conv in valid_es or (min(valid_es) <= es_conv <= max(valid_es)):
+    if len(valid_es) > 0 and (es_conv in valid_es or (min(valid_es) <= es_conv <= max(valid_es))):
         try:
             n_conv = analysis.solve_power(effect_size=es_conv, power=power_val, alpha=alpha_val, ratio=1.0)
             if n_conv is not None and n_conv >= 2:
@@ -543,7 +543,7 @@ for es_conv, label in conventions:
             pass
 
 # Mark current effect size
-if effect_size_input >= min(valid_es) and effect_size_input <= max(valid_es):
+if len(valid_es) > 0 and effect_size_input >= min(valid_es) and effect_size_input <= max(valid_es):
     try:
         current_n = round(sample_size_per_group * k_groups)
         plt.scatter([effect_size_input], [current_n], color='red', s=100, zorder=5, label=f'Current (d={effect_size_input:.2f}, N={current_n})')
@@ -608,7 +608,7 @@ plt.plot(valid_es, valid_n, 'b-', linewidth=2, label='Required N')
 # Mark Cohen's f conventions for ANOVA
 conventions = [(0.10, 'Small'), (0.25, 'Medium'), (0.40, 'Large')]
 for es_conv, label in conventions:
-    if es_conv in valid_es or (min(valid_es) <= es_conv <= max(valid_es)):
+    if len(valid_es) > 0 and (es_conv in valid_es or (min(valid_es) <= es_conv <= max(valid_es))):
         try:
             n_conv = analysis.solve_power(effect_size=es_conv, k_groups=k_groups, power=power_val, alpha=alpha_val)
             if n_conv is not None and n_conv >= 2:
@@ -618,7 +618,7 @@ for es_conv, label in conventions:
             pass
 
 # Mark current effect size
-if effect_size_input >= min(valid_es) and effect_size_input <= max(valid_es):
+if len(valid_es) > 0 and effect_size_input >= min(valid_es) and effect_size_input <= max(valid_es):
     try:
         current_n = round(sample_size_per_group * k_groups)
         plt.scatter([effect_size_input], [current_n], color='red', s=100, zorder=5, label=f'Current (f={effect_size_input:.2f}, N={current_n})')
