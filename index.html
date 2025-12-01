@@ -17,7 +17,7 @@
     
     <meta name="citation_author" content="Pavlos Orfanidis">
     <meta name="citation_doi" content="10.5281/zenodo.17768003">
-    <meta name="citation_software_edition" content="3.0.0">
+    <meta name="citation_software_edition" content="3.0.1">
     <meta name="citation_abstract" content="A web-based sample size calculator for statistical power analysis, supporting T-Test, ANOVA, Paired T-Test, and Two Proportions calculations with sensitivity analysis charts and dropout rate adjustment.">
     
     
@@ -505,6 +505,12 @@
                     <span id="dropoutValue" class="value-display">0%</span>
                 </label>
                 <input type="range" id="dropout" min="0" max="0.5" step="0.01" value="0" oninput="updateValues()">
+                <div class="presets">
+                    <small>Quick Presets:</small>
+                    <button type="button" onclick="setDropoutRate(0.05)" aria-label="Set dropout rate to 5 percent">5%</button>
+                    <button type="button" onclick="setDropoutRate(0.10)" aria-label="Set dropout rate to 10 percent">10%</button>
+                    <button type="button" onclick="setDropoutRate(0.20)" aria-label="Set dropout rate to 20 percent">20%</button>
+                </div>
             </div>
             
             <h2>Required Sample:</h2>
@@ -575,7 +581,7 @@
                 <input type="number" id="modal-paired-mean2" step="any" placeholder="e.g., 72.5" oninput="calculatePairedES()">
             </div>
             <div class="modal-input-group">
-                <label for="modal-paired-sd">Standard Deviation (of differences or pooled SD)</label>
+                <label for="modal-paired-sd" title="Standard Deviation of differences, subscript diff">Standard Deviation of DIFFERENCES (SD<sub>diff</sub>)</label>
                 <input type="number" id="modal-paired-sd" step="any" min="0.001" placeholder="e.g., 15" oninput="calculatePairedES()">
             </div>
             <div class="modal-result">
@@ -748,6 +754,11 @@
 
         function setPairedEffectSize(value) {
             document.getElementById('pairedEffectSize').value = value;
+            updateValues();
+        }
+
+        function setDropoutRate(value) {
+            document.getElementById('dropout').value = value;
             updateValues();
         }
 

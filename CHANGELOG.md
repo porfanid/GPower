@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.1] - 2025-12-01
+
+### Fixed
+
+-   **Paired T-Test Modal - Scientific Precision**: Updated the Standard Deviation input label in the Paired T-Test Effect Size Calculator modal from the ambiguous "Standard Deviation (of differences or pooled SD)" to the scientifically precise "Standard Deviation of DIFFERENCES (SD_diff)" to prevent researchers from inputting incorrect values.
+-   **Dropout Rate UX Enhancement**: Added quick preset buttons (5%, 10%, 20%) to the Expected Dropout Rate slider for efficient selection of common clinical trial dropout rates, matching the UX pattern used for Effect Size presets.
+
 ## [3.0.0] - 2025-12-01
 
 ### Added
