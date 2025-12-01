@@ -4,9 +4,9 @@ authors:
   - family-names: "Orfanidis"
     given-names: "Pavlos"
 title: "GPower: Web-based Sample Size Calculator for Power Analysis"
-version: 2.0.0
+version: 3.0.0
 doi: 10.5281/zenodo.17768003
-date-released: 2025-11-30
+date-released: 2025-12-01
 url: "https://orfanidis.net.gr/GPower"
 repository-code: "https://github.com/porfanid/GPower"
 license: MIT
@@ -17,10 +17,13 @@ keywords:
   - statistics
   - anova
   - t-test
+  - paired-t-test
   - proportions
   - cohen-d
   - cohen-f
   - cohen-h
   - clinical-trials
   - dropout-rate
-abstract: "A web-based sample size calculator for statistical power analysis, supporting T-Test, ANOVA, and Two Proportions calculations. Features include dropout rate adjustment and real-time Cohen's h display for proportion comparisons. The tool runs entirely in the browser using Pyodide (Python in WebAssembly) and provides real-time calculations with an intuitive interface."
+  - sensitivity-analysis
+  - matplotlib
+abstract: "A web-based sample size calculator for statistical power analysis, supporting T-Test, ANOVA, Paired T-Test, and Two Proportions calculations. Features include sensitivity analysis charts, dropout rate adjustment, and real-time Cohen's effect size display. The tool runs entirely in the browser using Pyodide (Python in WebAssembly) with matplotlib for visualization."

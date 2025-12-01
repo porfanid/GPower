@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2025-12-01
+
+### Added
+
+-   **Sensitivity Analysis Chart**: Interactive visualization showing the relationship between Required Sample Size (N) and Effect Size. Features include:
+    -   Real-time chart generation using Matplotlib
+    -   Cohen's conventions marked as vertical dashed lines (Small/Medium/Large)
+    -   Current effect size position highlighted with a red dot
+    -   Professional, publication-ready chart output
+    -   Base64-encoded PNG images for seamless display
+
+-   **Paired T-Test Analysis**: New analysis type for dependent samples (before/after designs):
+    -   New dropdown option: "Paired T-Test (Before/After)"
+    -   Correlation slider (ρ) for expected correlation between paired measurements (0.01-0.99)
+    -   Adjusted effect size formula: d_adj = d / √(1 - ρ)
+    -   Accounts for reduced variance in paired designs, requiring fewer participants
+
+### Changed
+
+-   **Enhanced Python Engine**: Now loads matplotlib in addition to statsmodels for chart generation
+-   **Updated Documentation**: README updated with new features and parameters
+-   **Improved Chart Styling**: Uses manual matplotlib styling compatible with Pyodide (replaced seaborn styles)
+
 ## [2.0.0] - 2025-11-30
 
 ### Added
