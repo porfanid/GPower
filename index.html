@@ -1824,7 +1824,7 @@ json.dumps(result)
                     if (results.has_dropout) {
                         resultDiv.innerHTML = `<strong>${results.n} pairs (participants)</strong><br><small>(adjusted for dropouts)<br>Theoretical: ${results.n_theoretical} pairs</small>`;
                     } else {
-                        resultDiv.innerHTML = `<strong>${results.n} pairs (participants)</strong>`;
+                        resultDiv.innerHTML = `<strong>${results.n} pairs (participants)</strong><br><small>(Expected Correlation ρ=${correlation})</small>`;
                     }
                 } else if (results.value_type === "power") {
                     const powerPercent = (results.power * 100).toFixed(2);
