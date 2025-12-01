@@ -337,6 +337,11 @@
             
             <h2>Required Sample:</h2>
             <div id="result">...</div>
+
+            <div id="chart-container" style="display:none; margin-top: 25px;">
+                <h2>Sensitivity Analysis</h2>
+                <img id="sensitivity-chart" src="" alt="Sensitivity Analysis Chart" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            </div>
         </div>
         
         <div class="footer-metadata" style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
@@ -374,6 +379,7 @@
             // Set bar to 100% when package loading begins/completes
             progressBar.style.width = `100%`; 
             await pyodide.loadPackage("statsmodels");
+            await pyodide.loadPackage("matplotlib");
 
             // 3. Finalization
             progressText.innerText = "Engine ready!";
@@ -477,20 +483,160 @@
         async function calculateSampleSize(effectSize, power, alpha, groups, dropout) {
             if (!pyodide) return;
             const resultDiv = document.getElementById("result");
+            const chartContainer = document.getElementById("chart-container");
+            const chartImg = document.getElementById("sensitivity-chart");
             resultDiv.innerText = "Calculating...";
             resultDiv.classList.remove('error'); 
             let pythonCode = "";
             if (groups == 2) {
                 pythonCode = `
 from statsmodels.stats.power import TTestIndPower
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import io
+import base64
+
+effect_size_input = ${effectSize}
+power_val = ${power}
+alpha_val = ${alpha}
+k_groups = ${groups}
+dropout_rate = ${dropout}
+
 analysis = TTestIndPower()
-sample_size_per_group = analysis.solve_power(effect_size=${effectSize}, power=${power}, alpha=${alpha}, ratio=1.0)
+sample_size_per_group = analysis.solve_power(effect_size=effect_size_input, power=power_val, alpha=alpha_val, ratio=1.0)
+
+# Generate sensitivity curve
+effect_sizes = np.arange(0.1, 1.55, 0.05)
+sample_sizes = []
+for es in effect_sizes:
+    try:
+        n = analysis.solve_power(effect_size=es, power=power_val, alpha=alpha_val, ratio=1.0)
+        if n is not None and n >= 2:
+            sample_sizes.append(round(n * k_groups))
+        else:
+            sample_sizes.append(None)
+    except:
+        sample_sizes.append(None)
+
+# Create the chart
+plt.figure(figsize=(8, 5), dpi=100)
+plt.style.use('seaborn-v0_8-whitegrid')
+
+# Filter valid data points
+valid_es = [es for es, n in zip(effect_sizes, sample_sizes) if n is not None]
+valid_n = [n for n in sample_sizes if n is not None]
+
+plt.plot(valid_es, valid_n, 'b-', linewidth=2, label='Required N')
+
+# Mark Cohen's d conventions for T-test
+conventions = [(0.2, 'Small'), (0.5, 'Medium'), (0.8, 'Large')]
+for es_conv, label in conventions:
+    if es_conv in valid_es or (min(valid_es) <= es_conv <= max(valid_es)):
+        try:
+            n_conv = analysis.solve_power(effect_size=es_conv, power=power_val, alpha=alpha_val, ratio=1.0)
+            if n_conv is not None and n_conv >= 2:
+                plt.axvline(x=es_conv, color='gray', linestyle='--', alpha=0.7)
+                plt.annotate(label, xy=(es_conv, max(valid_n)*0.95), fontsize=9, ha='center', color='gray')
+        except:
+            pass
+
+# Mark current effect size
+if effect_size_input >= min(valid_es) and effect_size_input <= max(valid_es):
+    try:
+        current_n = round(sample_size_per_group * k_groups)
+        plt.scatter([effect_size_input], [current_n], color='red', s=100, zorder=5, label=f'Current (d={effect_size_input:.2f}, N={current_n})')
+    except:
+        pass
+
+plt.xlabel("Effect Size (Cohen's d)", fontsize=12)
+plt.ylabel('Required Total Sample Size (N)', fontsize=12)
+plt.title(f'Sensitivity Analysis: N vs Effect Size\\n(Power={power_val}, α={alpha_val})', fontsize=14)
+plt.legend(loc='upper right')
+plt.tight_layout()
+
+# Encode to base64
+buffer = io.BytesIO()
+plt.savefig(buffer, format='png', bbox_inches='tight', facecolor='white')
+buffer.seek(0)
+plot_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+plt.close()
 `;
             } else {
                 pythonCode = `
 from statsmodels.stats.power import FTestAnovaPower
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import io
+import base64
+
+effect_size_input = ${effectSize}
+power_val = ${power}
+alpha_val = ${alpha}
+k_groups = ${groups}
+dropout_rate = ${dropout}
+
 analysis = FTestAnovaPower()
-sample_size_per_group = analysis.solve_power(effect_size=${effectSize}, k_groups=${groups}, power=${power}, alpha=${alpha})
+sample_size_per_group = analysis.solve_power(effect_size=effect_size_input, k_groups=k_groups, power=power_val, alpha=alpha_val)
+
+# Generate sensitivity curve
+effect_sizes = np.arange(0.1, 0.85, 0.025)
+sample_sizes = []
+for es in effect_sizes:
+    try:
+        n = analysis.solve_power(effect_size=es, k_groups=k_groups, power=power_val, alpha=alpha_val)
+        if n is not None and n >= 2:
+            sample_sizes.append(round(n * k_groups))
+        else:
+            sample_sizes.append(None)
+    except:
+        sample_sizes.append(None)
+
+# Create the chart
+plt.figure(figsize=(8, 5), dpi=100)
+plt.style.use('seaborn-v0_8-whitegrid')
+
+# Filter valid data points
+valid_es = [es for es, n in zip(effect_sizes, sample_sizes) if n is not None]
+valid_n = [n for n in sample_sizes if n is not None]
+
+plt.plot(valid_es, valid_n, 'b-', linewidth=2, label='Required N')
+
+# Mark Cohen's f conventions for ANOVA
+conventions = [(0.10, 'Small'), (0.25, 'Medium'), (0.40, 'Large')]
+for es_conv, label in conventions:
+    if es_conv in valid_es or (min(valid_es) <= es_conv <= max(valid_es)):
+        try:
+            n_conv = analysis.solve_power(effect_size=es_conv, k_groups=k_groups, power=power_val, alpha=alpha_val)
+            if n_conv is not None and n_conv >= 2:
+                plt.axvline(x=es_conv, color='gray', linestyle='--', alpha=0.7)
+                plt.annotate(label, xy=(es_conv, max(valid_n)*0.95), fontsize=9, ha='center', color='gray')
+        except:
+            pass
+
+# Mark current effect size
+if effect_size_input >= min(valid_es) and effect_size_input <= max(valid_es):
+    try:
+        current_n = round(sample_size_per_group * k_groups)
+        plt.scatter([effect_size_input], [current_n], color='red', s=100, zorder=5, label=f'Current (f={effect_size_input:.2f}, N={current_n})')
+    except:
+        pass
+
+plt.xlabel("Effect Size (Cohen's f)", fontsize=12)
+plt.ylabel('Required Total Sample Size (N)', fontsize=12)
+plt.title(f'Sensitivity Analysis: N vs Effect Size\\n(Power={power_val}, α={alpha_val}, Groups={k_groups})', fontsize=14)
+plt.legend(loc='upper right')
+plt.tight_layout()
+
+# Encode to base64
+buffer = io.BytesIO()
+plt.savefig(buffer, format='png', bbox_inches='tight', facecolor='white')
+buffer.seek(0)
+plot_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+plt.close()
 `;
             }
             pythonCode += `
@@ -501,13 +647,12 @@ if sample_size_per_group is None or sample_size_per_group < 2:
 else:
     per_group_theoretical = round(sample_size_per_group)
     total_theoretical = round(sample_size_per_group * ${groups})
-    dropout_rate = ${dropout}
     if dropout_rate > 0:
         per_group_adjusted = math.ceil(per_group_theoretical / (1 - dropout_rate))
         total_adjusted = math.ceil(total_theoretical / (1 - dropout_rate))
-        result = {"per_group": per_group_adjusted, "total": total_adjusted, "per_group_theoretical": per_group_theoretical, "total_theoretical": total_theoretical, "has_dropout": True}
+        result = {"per_group": per_group_adjusted, "total": total_adjusted, "per_group_theoretical": per_group_theoretical, "total_theoretical": total_theoretical, "has_dropout": True, "plot_base64": plot_base64}
     else:
-        result = {"per_group": per_group_theoretical, "total": total_theoretical, "has_dropout": False}
+        result = {"per_group": per_group_theoretical, "total": total_theoretical, "has_dropout": False, "plot_base64": plot_base64}
 json.dumps(result)
 `;
             try {
@@ -519,17 +664,25 @@ json.dumps(result)
                 } else {
                     resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} participants per group)</small>`;
                 }
+                // Display the chart
+                if (results.plot_base64) {
+                    chartImg.src = 'data:image/png;base64,' + results.plot_base64;
+                    chartContainer.style.display = 'block';
+                }
             } catch (error) {
                 console.error("Calculation Error:", error);
                 // This is the correct, general error message
                 resultDiv.innerText = "Calculation not possible. The combination of parameters is outside logical limits. Try slightly changing one of the values.";
                 resultDiv.classList.add('error');
+                chartContainer.style.display = 'none';
             }
         }
 
         async function calculateProportionSampleSize(p1, p2, power, alpha, dropout) {
             if (!pyodide) return;
             const resultDiv = document.getElementById("result");
+            const chartContainer = document.getElementById("chart-container");
+            const chartImg = document.getElementById("sensitivity-chart");
             resultDiv.innerText = "Calculating...";
             resultDiv.classList.remove('error');
 
@@ -544,6 +697,7 @@ json.dumps(result)
             if (isNaN(p1) || isNaN(p2) || isNaN(power) || isNaN(alpha)) {
                 resultDiv.innerText = "All inputs must be valid numbers.";
                 resultDiv.classList.add('error');
+                chartContainer.style.display = 'none';
                 return;
             }
 
@@ -551,6 +705,7 @@ json.dumps(result)
             if (p1 < 0.01 || p1 > 0.99 || p2 < 0.01 || p2 > 0.99) {
                 resultDiv.innerText = "P1 and P2 must be between 0.01 and 0.99.";
                 resultDiv.classList.add('error');
+                chartContainer.style.display = 'none';
                 return;
             }
 
@@ -558,12 +713,19 @@ json.dumps(result)
             if (Math.abs(p1 - p2) < 0.001) {
                 resultDiv.innerText = "P1 and P2 must be different to detect an effect.";
                 resultDiv.classList.add('error');
+                chartContainer.style.display = 'none';
                 return;
             }
 
             const pythonCode = `
 from statsmodels.stats.proportion import proportion_effectsize
 from statsmodels.stats.power import NormalIndPower
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import io
+import base64
 import json
 import math
 
@@ -580,6 +742,63 @@ effect_size = proportion_effectsize(p1, p2)
 analysis = NormalIndPower()
 sample_size_per_group = analysis.solve_power(effect_size=abs(effect_size), power=power_val, alpha=alpha_val, ratio=1.0, alternative='two-sided')
 
+# Generate sensitivity curve for Cohen's h
+effect_sizes = np.arange(0.1, 1.55, 0.05)
+sample_sizes = []
+for es in effect_sizes:
+    try:
+        n = analysis.solve_power(effect_size=es, power=power_val, alpha=alpha_val, ratio=1.0, alternative='two-sided')
+        if n is not None and n >= 2:
+            sample_sizes.append(round(n * 2))
+        else:
+            sample_sizes.append(None)
+    except:
+        sample_sizes.append(None)
+
+# Create the chart
+plt.figure(figsize=(8, 5), dpi=100)
+plt.style.use('seaborn-v0_8-whitegrid')
+
+# Filter valid data points
+valid_es = [es for es, n in zip(effect_sizes, sample_sizes) if n is not None]
+valid_n = [n for n in sample_sizes if n is not None]
+
+plt.plot(valid_es, valid_n, 'b-', linewidth=2, label='Required N')
+
+# Mark Cohen's h conventions
+conventions = [(0.2, 'Small'), (0.5, 'Medium'), (0.8, 'Large')]
+for es_conv, label in conventions:
+    if len(valid_es) > 0 and (min(valid_es) <= es_conv <= max(valid_es)):
+        try:
+            n_conv = analysis.solve_power(effect_size=es_conv, power=power_val, alpha=alpha_val, ratio=1.0, alternative='two-sided')
+            if n_conv is not None and n_conv >= 2:
+                plt.axvline(x=es_conv, color='gray', linestyle='--', alpha=0.7)
+                plt.annotate(label, xy=(es_conv, max(valid_n)*0.95), fontsize=9, ha='center', color='gray')
+        except:
+            pass
+
+# Mark current effect size
+current_h = abs(effect_size)
+if len(valid_es) > 0 and current_h >= min(valid_es) and current_h <= max(valid_es):
+    try:
+        current_n = round(sample_size_per_group * 2)
+        plt.scatter([current_h], [current_n], color='red', s=100, zorder=5, label=f'Current (h={current_h:.2f}, N={current_n})')
+    except:
+        pass
+
+plt.xlabel("Effect Size (Cohen's h)", fontsize=12)
+plt.ylabel('Required Total Sample Size (N)', fontsize=12)
+plt.title(f'Sensitivity Analysis: N vs Effect Size\\n(Power={power_val}, α={alpha_val})', fontsize=14)
+plt.legend(loc='upper right')
+plt.tight_layout()
+
+# Encode to base64
+buffer = io.BytesIO()
+plt.savefig(buffer, format='png', bbox_inches='tight', facecolor='white')
+buffer.seek(0)
+plot_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+plt.close()
+
 # Minimum sample size of 2 is required for valid statistical inference (at least 2 per group)
 if sample_size_per_group is None or sample_size_per_group < 2:
     result = {"error": True}
@@ -589,9 +808,9 @@ else:
     if dropout_rate > 0:
         per_group_adjusted = math.ceil(per_group_theoretical / (1 - dropout_rate))
         total_adjusted = math.ceil(total_theoretical / (1 - dropout_rate))
-        result = {"per_group": per_group_adjusted, "total": total_adjusted, "per_group_theoretical": per_group_theoretical, "total_theoretical": total_theoretical, "effect_size": round(abs(effect_size), 3), "has_dropout": True}
+        result = {"per_group": per_group_adjusted, "total": total_adjusted, "per_group_theoretical": per_group_theoretical, "total_theoretical": total_theoretical, "effect_size": round(abs(effect_size), 3), "has_dropout": True, "plot_base64": plot_base64}
     else:
-        result = {"per_group": per_group_theoretical, "total": total_theoretical, "effect_size": round(abs(effect_size), 3), "has_dropout": False}
+        result = {"per_group": per_group_theoretical, "total": total_theoretical, "effect_size": round(abs(effect_size), 3), "has_dropout": False, "plot_base64": plot_base64}
 json.dumps(result)
 `;
             try {
@@ -603,10 +822,16 @@ json.dumps(result)
                 } else {
                     resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} per group, Cohen's h = ${results.effect_size})</small>`;
                 }
+                // Display the chart
+                if (results.plot_base64) {
+                    chartImg.src = 'data:image/png;base64,' + results.plot_base64;
+                    chartContainer.style.display = 'block';
+                }
             } catch (error) {
                 console.error("Calculation Error:", error);
                 resultDiv.innerText = "Calculation not possible. The combination of parameters is outside logical limits. Try slightly changing one of the values.";
                 resultDiv.classList.add('error');
+                chartContainer.style.display = 'none';
             }
         }
     </script>
