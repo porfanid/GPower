@@ -555,7 +555,7 @@ dropout_rate = ${dropout}
 analysis = TTestIndPower()
 sample_size_per_group = analysis.solve_power(effect_size=effect_size_input, power=power_val, alpha=alpha_val, ratio=1.0)
 
-# Generate sensitivity curve
+# Generate sensitivity curve for N vs Effect Size
 effect_sizes = np.arange(0.1, 1.55, 0.05)
 sample_sizes = []
 for es in effect_sizes:
@@ -568,17 +568,31 @@ for es in effect_sizes:
     except:
         sample_sizes.append(None)
 
-# Create the chart
-fig, ax = plt.subplots(figsize=(8, 5), dpi=100)
-ax.set_facecolor('#f8f8f8')
+# Generate sensitivity curve for N vs Power
+power_range = np.arange(0.5, 0.991, 0.02)
+power_sample_sizes = []
+for pwr in power_range:
+    try:
+        n = analysis.solve_power(effect_size=effect_size_input, power=pwr, alpha=alpha_val, ratio=1.0)
+        if n is not None and n >= 2:
+            power_sample_sizes.append(round(n * k_groups))
+        else:
+            power_sample_sizes.append(None)
+    except:
+        power_sample_sizes.append(None)
+
+# Create the dual chart
+fig, axes = plt.subplots(1, 2, figsize=(12, 5), dpi=100)
+for ax in axes:
+    ax.set_facecolor('#f8f8f8')
 fig.patch.set_facecolor('white')
 
-# Filter valid data points
+# Subplot 1: N vs Effect Size
 valid_es = [es for es, n in zip(effect_sizes, sample_sizes) if n is not None]
 valid_n = [n for n in sample_sizes if n is not None]
 
-ax.plot(valid_es, valid_n, 'b-', linewidth=2, label='Required N')
-ax.grid(True, linestyle='-', alpha=0.3)
+axes[0].plot(valid_es, valid_n, 'b-', linewidth=2, label='Required N')
+axes[0].grid(True, linestyle='-', alpha=0.3)
 
 # Mark Cohen's d conventions for T-test
 conventions = [(0.2, 'Small'), (0.5, 'Medium'), (0.8, 'Large')]
@@ -587,8 +601,8 @@ for es_conv, label in conventions:
         try:
             n_conv = analysis.solve_power(effect_size=es_conv, power=power_val, alpha=alpha_val, ratio=1.0)
             if n_conv is not None and n_conv >= 2:
-                ax.axvline(x=es_conv, color='gray', linestyle='--', alpha=0.7)
-                ax.annotate(label, xy=(es_conv, max(valid_n)*0.95), fontsize=9, ha='center', color='gray')
+                axes[0].axvline(x=es_conv, color='gray', linestyle='--', alpha=0.7)
+                axes[0].annotate(label, xy=(es_conv, max(valid_n)*0.95), fontsize=9, ha='center', color='gray')
         except:
             pass
 
@@ -596,14 +610,40 @@ for es_conv, label in conventions:
 if len(valid_es) > 0 and effect_size_input >= min(valid_es) and effect_size_input <= max(valid_es):
     try:
         current_n = round(sample_size_per_group * k_groups)
-        ax.scatter([effect_size_input], [current_n], color='red', s=100, zorder=5, label=f'Current (d={effect_size_input:.2f}, N={current_n})')
+        axes[0].scatter([effect_size_input], [current_n], color='red', s=100, zorder=5, label=f'Current (d={effect_size_input:.2f}, N={current_n})')
     except:
         pass
 
-ax.set_xlabel("Effect Size (Cohen's d)", fontsize=12)
-ax.set_ylabel('Required Total Sample Size (N)', fontsize=12)
-ax.set_title(f'Sensitivity Analysis: N vs Effect Size\\n(Power={power_val}, α={alpha_val})', fontsize=14)
-ax.legend(loc='upper right')
+axes[0].set_xlabel("Effect Size (Cohen's d)", fontsize=12)
+axes[0].set_ylabel('Required Total Sample Size (N)', fontsize=12)
+axes[0].set_title(f'N vs Effect Size\\n(Power={power_val}, α={alpha_val})', fontsize=14)
+axes[0].legend(loc='upper right')
+
+# Subplot 2: N vs Power
+valid_pwr = [pwr for pwr, n in zip(power_range, power_sample_sizes) if n is not None]
+valid_pwr_n = [n for n in power_sample_sizes if n is not None]
+
+axes[1].plot(valid_pwr, valid_pwr_n, 'g-', linewidth=2, label='Required N')
+axes[1].grid(True, linestyle='-', alpha=0.3)
+
+# Mark standard power = 0.80
+if len(valid_pwr) > 0 and 0.80 >= min(valid_pwr) and 0.80 <= max(valid_pwr):
+    axes[1].axvline(x=0.80, color='gray', linestyle='--', alpha=0.7)
+    axes[1].annotate('Standard (0.80)', xy=(0.80, max(valid_pwr_n)*0.95), fontsize=9, ha='center', color='gray')
+
+# Mark current power
+if len(valid_pwr) > 0 and power_val >= min(valid_pwr) and power_val <= max(valid_pwr):
+    try:
+        current_n = round(sample_size_per_group * k_groups)
+        axes[1].scatter([power_val], [current_n], color='red', s=100, zorder=5, label=f'Current (Power={power_val:.2f}, N={current_n})')
+    except:
+        pass
+
+axes[1].set_xlabel('Statistical Power (1 - β)', fontsize=12)
+axes[1].set_ylabel('Required Total Sample Size (N)', fontsize=12)
+axes[1].set_title(f'N vs Power\\n(Effect Size d={effect_size_input}, α={alpha_val})', fontsize=14)
+axes[1].legend(loc='upper left')
+
 fig.tight_layout()
 
 # Encode to base64
@@ -632,7 +672,7 @@ dropout_rate = ${dropout}
 analysis = FTestAnovaPower()
 sample_size_per_group = analysis.solve_power(effect_size=effect_size_input, k_groups=k_groups, power=power_val, alpha=alpha_val)
 
-# Generate sensitivity curve
+# Generate sensitivity curve for N vs Effect Size
 effect_sizes = np.arange(0.1, 0.85, 0.025)
 sample_sizes = []
 for es in effect_sizes:
@@ -645,17 +685,31 @@ for es in effect_sizes:
     except:
         sample_sizes.append(None)
 
-# Create the chart
-fig, ax = plt.subplots(figsize=(8, 5), dpi=100)
-ax.set_facecolor('#f8f8f8')
+# Generate sensitivity curve for N vs Power
+power_range = np.arange(0.5, 0.991, 0.02)
+power_sample_sizes = []
+for pwr in power_range:
+    try:
+        n = analysis.solve_power(effect_size=effect_size_input, k_groups=k_groups, power=pwr, alpha=alpha_val)
+        if n is not None and n >= 2:
+            power_sample_sizes.append(round(n * k_groups))
+        else:
+            power_sample_sizes.append(None)
+    except:
+        power_sample_sizes.append(None)
+
+# Create the dual chart
+fig, axes = plt.subplots(1, 2, figsize=(12, 5), dpi=100)
+for ax in axes:
+    ax.set_facecolor('#f8f8f8')
 fig.patch.set_facecolor('white')
 
-# Filter valid data points
+# Subplot 1: N vs Effect Size
 valid_es = [es for es, n in zip(effect_sizes, sample_sizes) if n is not None]
 valid_n = [n for n in sample_sizes if n is not None]
 
-ax.plot(valid_es, valid_n, 'b-', linewidth=2, label='Required N')
-ax.grid(True, linestyle='-', alpha=0.3)
+axes[0].plot(valid_es, valid_n, 'b-', linewidth=2, label='Required N')
+axes[0].grid(True, linestyle='-', alpha=0.3)
 
 # Mark Cohen's f conventions for ANOVA
 conventions = [(0.10, 'Small'), (0.25, 'Medium'), (0.40, 'Large')]
@@ -664,8 +718,8 @@ for es_conv, label in conventions:
         try:
             n_conv = analysis.solve_power(effect_size=es_conv, k_groups=k_groups, power=power_val, alpha=alpha_val)
             if n_conv is not None and n_conv >= 2:
-                ax.axvline(x=es_conv, color='gray', linestyle='--', alpha=0.7)
-                ax.annotate(label, xy=(es_conv, max(valid_n)*0.95), fontsize=9, ha='center', color='gray')
+                axes[0].axvline(x=es_conv, color='gray', linestyle='--', alpha=0.7)
+                axes[0].annotate(label, xy=(es_conv, max(valid_n)*0.95), fontsize=9, ha='center', color='gray')
         except:
             pass
 
@@ -673,14 +727,40 @@ for es_conv, label in conventions:
 if len(valid_es) > 0 and effect_size_input >= min(valid_es) and effect_size_input <= max(valid_es):
     try:
         current_n = round(sample_size_per_group * k_groups)
-        ax.scatter([effect_size_input], [current_n], color='red', s=100, zorder=5, label=f'Current (f={effect_size_input:.2f}, N={current_n})')
+        axes[0].scatter([effect_size_input], [current_n], color='red', s=100, zorder=5, label=f'Current (f={effect_size_input:.2f}, N={current_n})')
     except:
         pass
 
-ax.set_xlabel("Effect Size (Cohen's f)", fontsize=12)
-ax.set_ylabel('Required Total Sample Size (N)', fontsize=12)
-ax.set_title(f'Sensitivity Analysis: N vs Effect Size\\n(Power={power_val}, α={alpha_val}, Groups={k_groups})', fontsize=14)
-ax.legend(loc='upper right')
+axes[0].set_xlabel("Effect Size (Cohen's f)", fontsize=12)
+axes[0].set_ylabel('Required Total Sample Size (N)', fontsize=12)
+axes[0].set_title(f'N vs Effect Size\\n(Power={power_val}, α={alpha_val}, Groups={k_groups})', fontsize=14)
+axes[0].legend(loc='upper right')
+
+# Subplot 2: N vs Power
+valid_pwr = [pwr for pwr, n in zip(power_range, power_sample_sizes) if n is not None]
+valid_pwr_n = [n for n in power_sample_sizes if n is not None]
+
+axes[1].plot(valid_pwr, valid_pwr_n, 'g-', linewidth=2, label='Required N')
+axes[1].grid(True, linestyle='-', alpha=0.3)
+
+# Mark standard power = 0.80
+if len(valid_pwr) > 0 and 0.80 >= min(valid_pwr) and 0.80 <= max(valid_pwr):
+    axes[1].axvline(x=0.80, color='gray', linestyle='--', alpha=0.7)
+    axes[1].annotate('Standard (0.80)', xy=(0.80, max(valid_pwr_n)*0.95), fontsize=9, ha='center', color='gray')
+
+# Mark current power
+if len(valid_pwr) > 0 and power_val >= min(valid_pwr) and power_val <= max(valid_pwr):
+    try:
+        current_n = round(sample_size_per_group * k_groups)
+        axes[1].scatter([power_val], [current_n], color='red', s=100, zorder=5, label=f'Current (Power={power_val:.2f}, N={current_n})')
+    except:
+        pass
+
+axes[1].set_xlabel('Statistical Power (1 - β)', fontsize=12)
+axes[1].set_ylabel('Required Total Sample Size (N)', fontsize=12)
+axes[1].set_title(f'N vs Power\\n(Effect Size f={effect_size_input}, α={alpha_val})', fontsize=14)
+axes[1].legend(loc='upper left')
+
 fig.tight_layout()
 
 # Encode to base64
@@ -765,7 +845,7 @@ d_adjusted = effect_size_input / math.sqrt(1 - correlation_val)
 analysis = TTestPower()
 sample_size = analysis.solve_power(effect_size=d_adjusted, power=power_val, alpha=alpha_val, alternative='two-sided')
 
-# Generate sensitivity curve
+# Generate sensitivity curve for N vs Effect Size
 effect_sizes = np.arange(0.1, 1.55, 0.05)
 sample_sizes = []
 for es in effect_sizes:
@@ -779,17 +859,31 @@ for es in effect_sizes:
     except:
         sample_sizes.append(None)
 
-# Create the chart
-fig, ax = plt.subplots(figsize=(8, 5), dpi=100)
-ax.set_facecolor('#f8f8f8')
+# Generate sensitivity curve for N vs Power
+power_range = np.arange(0.5, 0.991, 0.02)
+power_sample_sizes = []
+for pwr in power_range:
+    try:
+        n = analysis.solve_power(effect_size=d_adjusted, power=pwr, alpha=alpha_val, alternative='two-sided')
+        if n is not None and n >= 2:
+            power_sample_sizes.append(round(n))
+        else:
+            power_sample_sizes.append(None)
+    except:
+        power_sample_sizes.append(None)
+
+# Create the dual chart
+fig, axes = plt.subplots(1, 2, figsize=(12, 5), dpi=100)
+for ax in axes:
+    ax.set_facecolor('#f8f8f8')
 fig.patch.set_facecolor('white')
 
-# Filter valid data points
+# Subplot 1: N vs Effect Size
 valid_es = [es for es, n in zip(effect_sizes, sample_sizes) if n is not None]
 valid_n = [n for n in sample_sizes if n is not None]
 
-ax.plot(valid_es, valid_n, 'b-', linewidth=2, label='Required N (pairs)')
-ax.grid(True, linestyle='-', alpha=0.3)
+axes[0].plot(valid_es, valid_n, 'b-', linewidth=2, label='Required N (pairs)')
+axes[0].grid(True, linestyle='-', alpha=0.3)
 
 # Mark Cohen's d conventions
 conventions = [(0.2, 'Small'), (0.5, 'Medium'), (0.8, 'Large')]
@@ -799,8 +893,8 @@ for es_conv, label in conventions:
             es_adj = es_conv / math.sqrt(1 - correlation_val)
             n_conv = analysis.solve_power(effect_size=es_adj, power=power_val, alpha=alpha_val, alternative='two-sided')
             if n_conv is not None and n_conv >= 2:
-                ax.axvline(x=es_conv, color='gray', linestyle='--', alpha=0.7)
-                ax.annotate(label, xy=(es_conv, max(valid_n)*0.95), fontsize=9, ha='center', color='gray')
+                axes[0].axvline(x=es_conv, color='gray', linestyle='--', alpha=0.7)
+                axes[0].annotate(label, xy=(es_conv, max(valid_n)*0.95), fontsize=9, ha='center', color='gray')
         except:
             pass
 
@@ -808,14 +902,40 @@ for es_conv, label in conventions:
 if len(valid_es) > 0 and effect_size_input >= min(valid_es) and effect_size_input <= max(valid_es):
     try:
         current_n = round(sample_size)
-        ax.scatter([effect_size_input], [current_n], color='red', s=100, zorder=5, label=f'Current (d={effect_size_input:.2f}, N={current_n})')
+        axes[0].scatter([effect_size_input], [current_n], color='red', s=100, zorder=5, label=f'Current (d={effect_size_input:.2f}, N={current_n})')
     except:
         pass
 
-ax.set_xlabel("Effect Size (Cohen's d)", fontsize=12)
-ax.set_ylabel('Required Sample Size (N pairs)', fontsize=12)
-ax.set_title(f'Sensitivity Analysis: Paired T-Test\\n(Power={power_val}, α={alpha_val}, ρ={correlation_val})', fontsize=14)
-ax.legend(loc='upper right')
+axes[0].set_xlabel("Effect Size (Cohen's d)", fontsize=12)
+axes[0].set_ylabel('Required Sample Size (N pairs)', fontsize=12)
+axes[0].set_title(f'N vs Effect Size\\n(Power={power_val}, α={alpha_val}, ρ={correlation_val})', fontsize=14)
+axes[0].legend(loc='upper right')
+
+# Subplot 2: N vs Power
+valid_pwr = [pwr for pwr, n in zip(power_range, power_sample_sizes) if n is not None]
+valid_pwr_n = [n for n in power_sample_sizes if n is not None]
+
+axes[1].plot(valid_pwr, valid_pwr_n, 'g-', linewidth=2, label='Required N (pairs)')
+axes[1].grid(True, linestyle='-', alpha=0.3)
+
+# Mark standard power = 0.80
+if len(valid_pwr) > 0 and 0.80 >= min(valid_pwr) and 0.80 <= max(valid_pwr):
+    axes[1].axvline(x=0.80, color='gray', linestyle='--', alpha=0.7)
+    axes[1].annotate('Standard (0.80)', xy=(0.80, max(valid_pwr_n)*0.95), fontsize=9, ha='center', color='gray')
+
+# Mark current power
+if len(valid_pwr) > 0 and power_val >= min(valid_pwr) and power_val <= max(valid_pwr):
+    try:
+        current_n = round(sample_size)
+        axes[1].scatter([power_val], [current_n], color='red', s=100, zorder=5, label=f'Current (Power={power_val:.2f}, N={current_n})')
+    except:
+        pass
+
+axes[1].set_xlabel('Statistical Power (1 - β)', fontsize=12)
+axes[1].set_ylabel('Required Sample Size (N pairs)', fontsize=12)
+axes[1].set_title(f'N vs Power\\n(Effect Size d={effect_size_input}, α={alpha_val})', fontsize=14)
+axes[1].legend(loc='upper left')
+
 fig.tight_layout()
 
 # Encode to base64
@@ -935,17 +1055,31 @@ for es in effect_sizes:
     except:
         sample_sizes.append(None)
 
-# Create the chart
-fig, ax = plt.subplots(figsize=(8, 5), dpi=100)
-ax.set_facecolor('#f8f8f8')
+# Generate sensitivity curve for N vs Power
+power_range = np.arange(0.5, 0.991, 0.02)
+power_sample_sizes = []
+for pwr in power_range:
+    try:
+        n = analysis.solve_power(effect_size=abs(effect_size), power=pwr, alpha=alpha_val, ratio=1.0, alternative='two-sided')
+        if n is not None and n >= 2:
+            power_sample_sizes.append(round(n * 2))
+        else:
+            power_sample_sizes.append(None)
+    except:
+        power_sample_sizes.append(None)
+
+# Create the dual chart
+fig, axes = plt.subplots(1, 2, figsize=(12, 5), dpi=100)
+for ax in axes:
+    ax.set_facecolor('#f8f8f8')
 fig.patch.set_facecolor('white')
 
-# Filter valid data points
+# Subplot 1: N vs Effect Size
 valid_es = [es for es, n in zip(effect_sizes, sample_sizes) if n is not None]
 valid_n = [n for n in sample_sizes if n is not None]
 
-ax.plot(valid_es, valid_n, 'b-', linewidth=2, label='Required N')
-ax.grid(True, linestyle='-', alpha=0.3)
+axes[0].plot(valid_es, valid_n, 'b-', linewidth=2, label='Required N')
+axes[0].grid(True, linestyle='-', alpha=0.3)
 
 # Mark Cohen's h conventions
 conventions = [(0.2, 'Small'), (0.5, 'Medium'), (0.8, 'Large')]
@@ -954,8 +1088,8 @@ for es_conv, label in conventions:
         try:
             n_conv = analysis.solve_power(effect_size=es_conv, power=power_val, alpha=alpha_val, ratio=1.0, alternative='two-sided')
             if n_conv is not None and n_conv >= 2:
-                ax.axvline(x=es_conv, color='gray', linestyle='--', alpha=0.7)
-                ax.annotate(label, xy=(es_conv, max(valid_n)*0.95), fontsize=9, ha='center', color='gray')
+                axes[0].axvline(x=es_conv, color='gray', linestyle='--', alpha=0.7)
+                axes[0].annotate(label, xy=(es_conv, max(valid_n)*0.95), fontsize=9, ha='center', color='gray')
         except:
             pass
 
@@ -964,14 +1098,40 @@ current_h = abs(effect_size)
 if len(valid_es) > 0 and current_h >= min(valid_es) and current_h <= max(valid_es):
     try:
         current_n = round(sample_size_per_group * 2)
-        ax.scatter([current_h], [current_n], color='red', s=100, zorder=5, label=f'Current (h={current_h:.2f}, N={current_n})')
+        axes[0].scatter([current_h], [current_n], color='red', s=100, zorder=5, label=f'Current (h={current_h:.2f}, N={current_n})')
     except:
         pass
 
-ax.set_xlabel("Effect Size (Cohen's h)", fontsize=12)
-ax.set_ylabel('Required Total Sample Size (N)', fontsize=12)
-ax.set_title(f'Sensitivity Analysis: N vs Effect Size\\n(Power={power_val}, α={alpha_val})', fontsize=14)
-ax.legend(loc='upper right')
+axes[0].set_xlabel("Effect Size (Cohen's h)", fontsize=12)
+axes[0].set_ylabel('Required Total Sample Size (N)', fontsize=12)
+axes[0].set_title(f'N vs Effect Size\\n(Power={power_val}, α={alpha_val})', fontsize=14)
+axes[0].legend(loc='upper right')
+
+# Subplot 2: N vs Power
+valid_pwr = [pwr for pwr, n in zip(power_range, power_sample_sizes) if n is not None]
+valid_pwr_n = [n for n in power_sample_sizes if n is not None]
+
+axes[1].plot(valid_pwr, valid_pwr_n, 'g-', linewidth=2, label='Required N')
+axes[1].grid(True, linestyle='-', alpha=0.3)
+
+# Mark standard power = 0.80
+if len(valid_pwr) > 0 and 0.80 >= min(valid_pwr) and 0.80 <= max(valid_pwr):
+    axes[1].axvline(x=0.80, color='gray', linestyle='--', alpha=0.7)
+    axes[1].annotate('Standard (0.80)', xy=(0.80, max(valid_pwr_n)*0.95), fontsize=9, ha='center', color='gray')
+
+# Mark current power
+if len(valid_pwr) > 0 and power_val >= min(valid_pwr) and power_val <= max(valid_pwr):
+    try:
+        current_n = round(sample_size_per_group * 2)
+        axes[1].scatter([power_val], [current_n], color='red', s=100, zorder=5, label=f'Current (Power={power_val:.2f}, N={current_n})')
+    except:
+        pass
+
+axes[1].set_xlabel('Statistical Power (1 - β)', fontsize=12)
+axes[1].set_ylabel('Required Total Sample Size (N)', fontsize=12)
+axes[1].set_title(f'N vs Power\\n(Effect Size h={current_h:.2f}, α={alpha_val})', fontsize=14)
+axes[1].legend(loc='upper left')
+
 fig.tight_layout()
 
 # Encode to base64

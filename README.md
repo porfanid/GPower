@@ -32,15 +32,18 @@ Simply visit the [GPower Web Tool](https://orfanidis.net.gr/GPower/) in a modern
   - Uses Cohen's h effect size (displayed in real-time)
   - Ideal for clinical trials comparing treatment vs. control success rates
 
-### Sensitivity Analysis Chart
+### Sensitivity Analysis Charts
 
-A key feature that transforms GPower from a single-number calculator into a visual decision-making tool:
+A key feature that transforms GPower from a single-number calculator into a visual decision-making tool with dual visualization:
 
-- **Interactive Visualization**: Displays the relationship between Required Sample Size (N) and Effect Size
+- **Dual Chart Layout**: Side-by-side charts showing N vs Effect Size and N vs Power
+- **N vs Effect Size Chart**: Shows how sample size requirements change across different effect sizes with your fixed Power and Alpha
+- **N vs Power Chart**: Shows how sample size requirements change as you vary statistical power with your fixed Effect Size and Alpha
 - **Cohen's Conventions**: Vertical lines mark Small, Medium, and Large effect size thresholds
-- **Current Position Indicator**: Red dot shows your current effect size and required N
-- **Real-time Updates**: Chart regenerates instantly as you adjust parameters
-- **Professional Output**: Clean, publication-ready charts using Matplotlib
+- **Standard Power Line**: Marks the conventional Power = 0.80 threshold
+- **Current Position Indicator**: Red dots show your current parameters and required N
+- **Real-time Updates**: Charts regenerate instantly as you adjust parameters
+- **Professional Output**: Clean, publication-ready dual charts using Matplotlib
 
 ### Additional Features
 
