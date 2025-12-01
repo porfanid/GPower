@@ -424,7 +424,7 @@
                     <input type="number" id="groups" value="2" min="2" max="10" oninput="updateValues()">
                 </div>
                 
-                <div class="control-group">
+                <div class="control-group" id="effect-size-control">
                     <label>
                         <span class="tooltip">Effect Size
                             <span class="tooltiptext">For T-test, Cohen's d is used. For ANOVA, Cohen's f is used.</span>
@@ -445,7 +445,7 @@
             </div>
 
             <div id="paired-controls" style="display:none;">
-                <div class="control-group">
+                <div class="control-group" id="paired-effect-size-control">
                     <label>
                         <span class="tooltip">Effect Size (Cohen's d)
                             <span class="tooltiptext">The standardized difference between before and after measurements.</span>
@@ -498,7 +498,7 @@
                 </div>
             </div>
             
-            <div class="control-group">
+            <div class="control-group" id="power-control">
                 <label>
                      <span class="tooltip">Statistical Power
                         <span class="tooltiptext">The probability of detecting an effect if it exists. Values below 0.80 are not recommended.</span>
@@ -714,7 +714,7 @@
             const dichotomousControls = document.getElementById('dichotomous-controls');
             const pairedControls = document.getElementById('paired-controls');
             const sampleSizeControl = document.getElementById('sample-size-control');
-            const powerControl = document.getElementById('power').parentElement.parentElement;
+            const powerControl = document.getElementById('power-control');
             
             // Show/hide controls based on analysis goal
             if (analysisGoal === 'a-priori') {
@@ -765,7 +765,7 @@
                 document.getElementById('correlationValue').innerText = parseFloat(correlation).toFixed(2);
                 
                 // Hide/show effect size control based on analysis goal
-                const pairedEffectSizeControl = document.getElementById('pairedEffectSize').parentElement.parentElement;
+                const pairedEffectSizeControl = document.getElementById('paired-effect-size-control');
                 if (analysisGoal === 'sensitivity') {
                     pairedEffectSizeControl.style.display = 'none';
                 } else {
@@ -794,7 +794,7 @@
                 document.getElementById('effectSizeValue').innerText = parseFloat(effectSize).toFixed(2);
                 
                 // Hide/show effect size control based on analysis goal
-                const effectSizeControl = document.getElementById('effectSize').parentElement.parentElement;
+                const effectSizeControl = document.getElementById('effect-size-control');
                 if (analysisGoal === 'sensitivity') {
                     effectSizeControl.style.display = 'none';
                 } else {
@@ -942,7 +942,7 @@ elif analysis_goal == "post-hoc":
             power_values.append(None)
     
     # Generate sensitivity curve for Power vs N
-    n_range = np.arange(max(4, sample_size_input * 0.5), sample_size_input * 2, max(1, sample_size_input * 0.02))
+    n_range = np.arange(max(4, sample_size_input * 0.5), sample_size_input * 2, max(1, int(sample_size_input * 0.02)))
     n_power_values = []
     for n_total in n_range:
         try:
@@ -969,7 +969,7 @@ elif analysis_goal == "sensitivity":
             effect_size_values.append(None)
     
     # Generate sensitivity curve for Effect Size vs N
-    n_range = np.arange(max(4, sample_size_input * 0.5), sample_size_input * 2, max(1, sample_size_input * 0.02))
+    n_range = np.arange(max(4, sample_size_input * 0.5), sample_size_input * 2, max(1, int(sample_size_input * 0.02)))
     n_effect_size_values = []
     for n_total in n_range:
         try:
@@ -1225,7 +1225,7 @@ elif analysis_goal == "post-hoc":
             power_values.append(None)
     
     # Generate sensitivity curve for Power vs N
-    n_range = np.arange(max(k_groups * 2, sample_size_input * 0.5), sample_size_input * 2, max(k_groups, sample_size_input * 0.02))
+    n_range = np.arange(max(k_groups * 2, sample_size_input * 0.5), sample_size_input * 2, max(k_groups, int(sample_size_input * 0.02)))
     n_power_values = []
     for n_total in n_range:
         try:
@@ -1252,7 +1252,7 @@ elif analysis_goal == "sensitivity":
             effect_size_values.append(None)
     
     # Generate sensitivity curve for Effect Size vs N
-    n_range = np.arange(max(k_groups * 2, sample_size_input * 0.5), sample_size_input * 2, max(k_groups, sample_size_input * 0.02))
+    n_range = np.arange(max(k_groups * 2, sample_size_input * 0.5), sample_size_input * 2, max(k_groups, int(sample_size_input * 0.02)))
     n_effect_size_values = []
     for n_total in n_range:
         try:
