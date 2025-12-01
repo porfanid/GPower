@@ -2205,9 +2205,9 @@ json.dumps(result)
                 
                 if (results.value_type === "sample_size") {
                     if (results.has_dropout) {
-                        resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} per group, Cohen's h = ${results.effect_size}, adjusted for dropouts)<br>Theoretical: ${results.total_theoretical} total (${results.per_group_theoretical} per group)</small>`;
+                        resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} per group, adjusted for dropouts)<br>Theoretical: ${results.total_theoretical} total (${results.per_group_theoretical} per group)</small>`;
                     } else {
-                        resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} per group, Cohen's h = ${results.effect_size})</small>`;
+                        resultDiv.innerHTML = `<strong>${results.total} participants (total)</strong><br><small>(${results.per_group} per group)</small>`;
                     }
                 } else if (results.value_type === "power") {
                     const powerPercent = (results.power * 100).toFixed(2);
