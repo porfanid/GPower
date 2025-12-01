@@ -252,6 +252,7 @@
                 </label>
                 <select id="analysisType" onchange="updateValues()">
                     <option value="groups">Groups (T-Test / ANOVA)</option>
+                    <option value="paired">Paired T-Test (Before/After)</option>
                     <option value="proportions">Two Proportions</option>
                 </select>
             </div>
@@ -280,6 +281,33 @@
                         <button id="preset-medium" onclick="setEffectSize(0.5)">Medium</button>
                         <button id="preset-large" onclick="setEffectSize(0.8)">Large</button>
                     </div>
+                </div>
+            </div>
+
+            <div id="paired-controls" style="display:none;">
+                <div class="control-group">
+                    <label>
+                        <span class="tooltip">Effect Size (Cohen's d)
+                            <span class="tooltiptext">The standardized difference between before and after measurements.</span>
+                        </span>
+                        <span id="pairedEffectSizeValue" class="value-display">0.50</span>
+                    </label>
+                    <input type="range" id="pairedEffectSize" min="0.05" max="1.5" step="0.01" value="0.5" oninput="updateValues()">
+                    <div class="presets">
+                        <small>Presets (Paired T-test: d):</small>
+                        <button onclick="setPairedEffectSize(0.2)">Small</button>
+                        <button onclick="setPairedEffectSize(0.5)">Medium</button>
+                        <button onclick="setPairedEffectSize(0.8)">Large</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>
+                        <span class="tooltip">Expected Correlation (ρ)
+                            <span class="tooltiptext">The expected correlation between paired measurements (before/after). Higher correlation means smaller required sample size.</span>
+                        </span>
+                        <span id="correlationValue" class="value-display">0.50</span>
+                    </label>
+                    <input type="range" id="correlation" min="0.01" max="0.99" step="0.01" value="0.5" oninput="updateValues()">
                 </div>
             </div>
 
@@ -402,6 +430,7 @@
 
             const continuousControls = document.getElementById('continuous-controls');
             const dichotomousControls = document.getElementById('dichotomous-controls');
+            const pairedControls = document.getElementById('paired-controls');
 
             document.getElementById('alphaValue').innerText = parseFloat(alpha).toFixed(2);
             document.getElementById('dropoutValue').innerText = Math.round(parseFloat(dropout) * 100) + '%';
@@ -416,6 +445,7 @@
             if (analysisType === 'proportions') {
                 continuousControls.style.display = 'none';
                 dichotomousControls.style.display = 'block';
+                pairedControls.style.display = 'none';
                 const p1 = document.getElementById('p1').value;
                 const p2 = document.getElementById('p2').value;
                 
@@ -424,10 +454,23 @@
                 document.getElementById('cohensHValue').innerText = 'h = ' + cohensH.toFixed(2);
                 
                 calculateProportionSampleSize(p1, p2, power, alpha, dropout);
+            } else if (analysisType === 'paired') {
+                // Paired T-Test mode (Before/After)
+                continuousControls.style.display = 'none';
+                dichotomousControls.style.display = 'none';
+                pairedControls.style.display = 'block';
+                
+                const effectSize = document.getElementById('pairedEffectSize').value;
+                const correlation = document.getElementById('correlation').value;
+                document.getElementById('pairedEffectSizeValue').innerText = parseFloat(effectSize).toFixed(2);
+                document.getElementById('correlationValue').innerText = parseFloat(correlation).toFixed(2);
+                
+                calculatePairedSampleSize(effectSize, power, alpha, correlation, dropout);
             } else {
                 // Groups mode (T-Test for 2 groups, ANOVA for 3+)
                 continuousControls.style.display = 'block';
                 dichotomousControls.style.display = 'none';
+                pairedControls.style.display = 'none';
                 
                 const groups = document.getElementById('groups').value;
                 const effectSizeSlider = document.getElementById('effectSize');
@@ -448,6 +491,11 @@
 
         function setEffectSize(value) {
             document.getElementById('effectSize').value = value;
+            updateValues();
+        }
+
+        function setPairedEffectSize(value) {
+            document.getElementById('pairedEffectSize').value = value;
             updateValues();
         }
 
@@ -676,6 +724,132 @@ json.dumps(result)
             } catch (error) {
                 console.error("Calculation Error:", error);
                 // This is the correct, general error message
+                resultDiv.innerText = "Calculation not possible. The combination of parameters is outside logical limits. Try slightly changing one of the values.";
+                resultDiv.classList.add('error');
+                chartContainer.style.display = 'none';
+            }
+        }
+
+        async function calculatePairedSampleSize(effectSize, power, alpha, correlation, dropout) {
+            if (!pyodide) return;
+            const resultDiv = document.getElementById("result");
+            const chartContainer = document.getElementById("chart-container");
+            const chartImg = document.getElementById("sensitivity-chart");
+            resultDiv.innerText = "Calculating...";
+            resultDiv.classList.remove('error');
+
+            const pythonCode = `
+from statsmodels.stats.power import TTestPower
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import io
+import base64
+import math
+import json
+
+effect_size_input = ${effectSize}
+power_val = ${power}
+alpha_val = ${alpha}
+correlation_val = ${correlation}
+dropout_rate = ${dropout}
+
+# Adjust effect size for paired samples: d_adj = d / sqrt(1 - r)
+# This accounts for the correlation between paired measurements
+d_adjusted = effect_size_input / math.sqrt(1 - correlation_val)
+
+# Use TTestPower for paired t-test (one-sample test on differences)
+analysis = TTestPower()
+sample_size = analysis.solve_power(effect_size=d_adjusted, power=power_val, alpha=alpha_val, alternative='two-sided')
+
+# Generate sensitivity curve
+effect_sizes = np.arange(0.1, 1.55, 0.05)
+sample_sizes = []
+for es in effect_sizes:
+    try:
+        es_adj = es / math.sqrt(1 - correlation_val)
+        n = analysis.solve_power(effect_size=es_adj, power=power_val, alpha=alpha_val, alternative='two-sided')
+        if n is not None and n >= 2:
+            sample_sizes.append(round(n))
+        else:
+            sample_sizes.append(None)
+    except:
+        sample_sizes.append(None)
+
+# Create the chart
+fig, ax = plt.subplots(figsize=(8, 5), dpi=100)
+ax.set_facecolor('#f8f8f8')
+fig.patch.set_facecolor('white')
+
+# Filter valid data points
+valid_es = [es for es, n in zip(effect_sizes, sample_sizes) if n is not None]
+valid_n = [n for n in sample_sizes if n is not None]
+
+ax.plot(valid_es, valid_n, 'b-', linewidth=2, label='Required N (pairs)')
+ax.grid(True, linestyle='-', alpha=0.3)
+
+# Mark Cohen's d conventions
+conventions = [(0.2, 'Small'), (0.5, 'Medium'), (0.8, 'Large')]
+for es_conv, label in conventions:
+    if len(valid_es) > 0 and (es_conv in valid_es or (min(valid_es) <= es_conv <= max(valid_es))):
+        try:
+            es_adj = es_conv / math.sqrt(1 - correlation_val)
+            n_conv = analysis.solve_power(effect_size=es_adj, power=power_val, alpha=alpha_val, alternative='two-sided')
+            if n_conv is not None and n_conv >= 2:
+                ax.axvline(x=es_conv, color='gray', linestyle='--', alpha=0.7)
+                ax.annotate(label, xy=(es_conv, max(valid_n)*0.95), fontsize=9, ha='center', color='gray')
+        except:
+            pass
+
+# Mark current effect size
+if len(valid_es) > 0 and effect_size_input >= min(valid_es) and effect_size_input <= max(valid_es):
+    try:
+        current_n = round(sample_size)
+        ax.scatter([effect_size_input], [current_n], color='red', s=100, zorder=5, label=f'Current (d={effect_size_input:.2f}, N={current_n})')
+    except:
+        pass
+
+ax.set_xlabel("Effect Size (Cohen's d)", fontsize=12)
+ax.set_ylabel('Required Sample Size (N pairs)', fontsize=12)
+ax.set_title(f'Sensitivity Analysis: Paired T-Test\\n(Power={power_val}, α={alpha_val}, ρ={correlation_val})', fontsize=14)
+ax.legend(loc='upper right')
+fig.tight_layout()
+
+# Encode to base64
+buffer = io.BytesIO()
+fig.savefig(buffer, format='png', bbox_inches='tight', facecolor='white')
+buffer.seek(0)
+plot_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+plt.close(fig)
+
+if sample_size is None or sample_size < 2:
+    result = {"error": True}
+else:
+    n_theoretical = round(sample_size)
+    if dropout_rate > 0:
+        n_adjusted = math.ceil(n_theoretical / (1 - dropout_rate))
+        result = {"n": n_adjusted, "n_theoretical": n_theoretical, "has_dropout": True, "plot_base64": plot_base64}
+    else:
+        result = {"n": n_theoretical, "has_dropout": False, "plot_base64": plot_base64}
+json.dumps(result)
+`;
+            try {
+                let resultsJson = await pyodide.runPythonAsync(pythonCode);
+                let results = JSON.parse(resultsJson);
+                if (results.error) { throw new Error("Calculation failed in Python."); }
+                if (results.has_dropout) {
+                    resultDiv.innerHTML = `<strong>${results.n} pairs (participants)</strong><br><small>(adjusted for dropouts)<br>Theoretical: ${results.n_theoretical} pairs</small>`;
+                } else {
+                    resultDiv.innerHTML = `<strong>${results.n} pairs (participants)</strong>`;
+                }
+                // Display the chart
+                if (results.plot_base64) {
+                    chartImg.src = 'data:image/png;base64,' + results.plot_base64;
+                    chartContainer.style.display = 'block';
+                }
+            } catch (error) {
+                console.error("Calculation Error:", error);
                 resultDiv.innerText = "Calculation not possible. The combination of parameters is outside logical limits. Try slightly changing one of the values.";
                 resultDiv.classList.add('error');
                 chartContainer.style.display = 'none';
